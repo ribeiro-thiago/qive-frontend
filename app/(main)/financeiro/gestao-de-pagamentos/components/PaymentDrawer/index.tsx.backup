@@ -1,0 +1,989 @@
+"use client";
+
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { X, Pencil, ChevronDown, MoreHorizontal, Box, Briefcase, Truck, Barcode, Receipt, FilePlus2, Maximize2, Minimize2 } from "lucide-react";
+import { Row, AssociatedDoc } from "../../types";
+import { getSupplier } from "@/lib/suppliers";
+import { formatAccessKey, formatCurrency } from "../../utils/formatters";
+import { useDocumentExpansion } from "../../hooks/useDocumentExpansion";
+import { CopyableNumber } from "@/components/ui/copyable-number";
+import { cn } from "@/lib/utils";
+
+interface PaymentDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  row: Row | null;
+  data: Row[];
+  setData: React.Dispatch<React.SetStateAction<Row[]>>;
+  currentTab: string;
+  tabs: Array<{ id: string; label: string }>;
+  onOpenDanfe: (doc: AssociatedDoc) => void;
+  onOpenBoleto: (doc: AssociatedDoc) => void;
+  onOpenComprovante: (doc: AssociatedDoc) => void;
+  onOpenNFSe: (doc: AssociatedDoc) => void;
+  onOpenCTe: (doc: AssociatedDoc) => void;
+}
+
+export function PaymentDrawer({
+  open,
+  onOpenChange,
+  row,
+  data,
+  setData,
+  currentTab,
+  tabs,
+  onOpenDanfe,
+  onOpenBoleto,
+  onOpenComprovante,
+  onOpenNFSe,
+  onOpenCTe,
+}: PaymentDrawerProps) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState<Row | null>(null);
+  const [paymentOpen, setPaymentOpen] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const [openLancado, setOpenLancado] = React.useState(false);
+  const lancadoRef = React.useRef<HTMLDivElement>(null);
+  const lancadoTrigger = React.useRef<HTMLButtonElement>(null);
+  const [lancadoMinW, setLancadoMinW] = React.useState<number | undefined>(undefined);
+
+  const paymentMethodRef = React.useRef<HTMLDivElement>(null);
+  const paymentContentRef = React.useRef<HTMLDivElement>(null);
+
+  const { expandedDocs, lastExpandedIdx, toggleExpansion, reset: resetExpansion } = useDocumentExpansion();
+
+  React.useEffect(() => {
+    if (row) {
+      setDraft({ ...row });
+      setEditing(false);
+      resetExpansion();
+    }
+  }, [row, resetExpansion]);
+
+  // Resetar estado de expansão quando o drawer fecha
+  React.useEffect(() => {
+    if (!open) {
+      setExpanded(false);
+    }
+  }, [open]);
+
+  // Usar row direto, sem buscar em data (evita recalcular)
+  const currentRow = row;
+
+  React.useEffect(() => {
+    if (openLancado && lancadoTrigger.current) {
+      setLancadoMinW(lancadoTrigger.current.offsetWidth);
+    }
+  }, [openLancado]);
+
+  React.useEffect(() => {
+    function onDocDown(ev: MouseEvent) {
+      if (!openLancado) return;
+      const t = ev.target as Node | null;
+      if (t && lancadoRef.current && !lancadoRef.current.contains(t)) {
+        setOpenLancado(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, [openLancado]);
+
+  // Scroll automático quando expandir a seção de pagamento
+  React.useEffect(() => {
+    if (paymentOpen && paymentContentRef.current) {
+      setTimeout(() => {
+        paymentContentRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }, 100);
+    }
+  }, [paymentOpen]);
+
+  // Scroll automático quando expandir documentos associados
+  React.useEffect(() => {
+    if (lastExpandedIdx != null && expandedDocs.has(lastExpandedIdx)) {
+      const expandedElement = document.querySelector(`[data-doc-item="${lastExpandedIdx}"]`);
+      if (expandedElement) {
+        setTimeout(() => {
+          expandedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        }, 100);
+      }
+    }
+  }, [lastExpandedIdx, expandedDocs]);
+
+  if (!currentRow) return null;
+
+  const handleSave = () => {
+    if (!draft || !currentRow) return;
+    const hasChanges = (
+      draft.lancadoEm !== currentRow.lancadoEm ||
+      draft.vencimento !== currentRow.vencimento ||
+      draft.ordemCompra !== currentRow.ordemCompra ||
+      draft.parcela !== currentRow.parcela ||
+      draft.centroCusto !== currentRow.centroCusto ||
+      draft.observacoes !== currentRow.observacoes
+    );
+    if (!hasChanges) { setEditing(false); return; }
+    
+    setData(prev => prev.map(r => r.id === currentRow.id ? ({
+      ...r,
+      lancadoEm: draft.lancadoEm,
+      vencimento: draft.vencimento,
+      ordemCompra: draft.ordemCompra,
+      parcela: draft.parcela,
+      centroCusto: draft.centroCusto,
+      observacoes: draft.observacoes,
+    }) : r));
+    setEditing(false);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
+      <SheetContent
+        className={cn(
+          "focus:outline-none focus-visible:outline-none transition-[width] duration-200 ease-in-out",
+          expanded 
+            ? "w-screen rounded-none max-w-none" 
+            : "w-[640px]"
+        )}
+        onInteractOutside={(e) => {
+          const t = (e.target as HTMLElement) || (e as any)?.detail?.originalEvent?.target as HTMLElement;
+          if (t && (
+            t.closest('[data-detail-trigger="true"]') ||
+            t.closest('[data-danfe-modal]') || 
+            t.closest('[data-danfe-overlay]') ||
+            t.closest('[data-comprovante-modal]') || 
+            t.closest('[data-comprovante-overlay]') ||
+            t.closest('[data-boleto-modal]') || 
+            t.closest('[data-boleto-overlay]') ||
+            t.closest('[data-nfse-modal]') || 
+            t.closest('[data-nfse-overlay]') ||
+            t.closest('[data-cte-modal]') || 
+            t.closest('[data-cte-overlay]') ||
+            t.closest('[data-filter-trigger]') ||
+            t.matches('input[type="checkbox"]') || 
+            t.closest('input[type="checkbox"]')
+          )) {
+            e.preventDefault();
+          }
+        }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <SheetHeader>
+          <div className="flex items-center gap-2 min-w-0">
+            <SheetTitle className="truncate text-[20px] font-bold">{currentRow.fornecedor}</SheetTitle>
+            {currentRow.lancadoEm !== currentTab && (
+              <span className="shrink-0 inline-flex items-center h-5 px-2 rounded-full bg-[#E7EEFF] text-[#0C3CF7] text-xs font-medium">
+                Movido para {tabs.find(t => t.id === currentRow.lancadoEm)?.label}
+              </span>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {editing && (
+              <>
+                <Button variant="secondary" onClick={() => { setDraft(currentRow); setEditing(false); }}>Cancelar</Button>
+                <Button onClick={handleSave}>Salvar alterações</Button>
+              </>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              aria-label={expanded ? "Recolher drawer" : "Expandir drawer"}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </Button>
+            </SheetClose>
+          </div>
+        </SheetHeader>
+
+        <div className={cn("p-4 text-sm", expanded ? "flex gap-4" : "space-y-4")}>
+          {/* Coluna 1 */}
+          <div className={cn(expanded ? "flex-1 space-y-4" : "contents")}>
+            {/* Seção Pagamento - Primeira */}
+            <div className="rounded-lg border border-border bg-white">
+              <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                <h3 className="text-sm font-semibold text-[#0d0f1c] flex-1">Pagamento</h3>
+                {!editing && (
+                  <Button
+                    size="default"
+                    variant="ghost"
+                    className="inline-flex items-center gap-2 font-bold hover:bg-[#EFF1F2] cursor-pointer"
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                    Editar
+                  </Button>
+                )}
+              </div>
+              <div className="p-4 grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Lançado em</Label>
+                  {editing ? (
+                    <div ref={lancadoRef} className="relative mt-1">
+                      <Button
+                        ref={lancadoTrigger}
+                        variant="outline"
+                        onClick={() => setOpenLancado(v => !v)}
+                        className={[
+                          "w-full px-3 inline-flex items-center justify-between gap-2 shadow-none font-bold",
+                          "hover:bg-[#EFF1F2]",
+                          openLancado ? "bg-[#EFF1F2]" : "",
+                        ].join(" ")}
+                      >
+                        <span className="t-text-sm truncate">{tabs.find(t => t.id === draft?.lancadoEm)?.label ?? 'Não informado'}</span>
+                        <ChevronDown className={["h-4 w-4 transition-transform", openLancado ? "rotate-180" : ""].join(" ")} />
+                      </Button>
+                      {openLancado && (
+                        <div
+                          className="absolute left-0 z-[100] mt-1 rounded-md border border-border bg-white p-1 shadow-md"
+                          style={{ minWidth: lancadoMinW }}
+                        >
+                          {tabs.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-[#EFF1F2]"
+                              onClick={() => { setDraft(d => d ? { ...d, lancadoEm: t.id as Row['lancadoEm'] } : d); setOpenLancado(false); }}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={"mt-1 " + (tabs.find(t => t.id === currentRow.lancadoEm)?.label ? "text-[#0d0f1c]" : "text-[#90949D]")}>
+                      {tabs.find(t => t.id === currentRow.lancadoEm)?.label ?? 'Não informado'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Status</Label>
+                  <div className="mt-1">
+                    <span className={[
+                      'inline-flex items-center h-6 px-2 rounded-full border text-xs font-medium',
+                      currentRow.status === 'Pago' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      currentRow.status === 'Vencido' ? 'bg-red-50 text-red-700 border-red-200' :
+                      currentRow.status === 'Aberto' ? 'bg-[#E7EEFF] text-[#0C3CF7] border-[#B8CCFF]' :
+                      'bg-gray-100 text-gray-600 border-gray-200'
+                    ].join(' ')}>
+                      {currentRow.status || '—'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Vencimento</Label>
+                  {editing ? (
+                    <Input className="mt-1 shadow-none" value={draft?.vencimento ?? ''} onChange={(e) => setDraft(d => d ? { ...d, vencimento: e.target.value } : d)} />
+                  ) : (
+                    <div className={"mt-1 " + (currentRow.vencimento ? "text-[#0d0f1c]" : "text-[#90949D]")}>{currentRow.vencimento || 'Não informado'}</div>
+                  )}
+                </div>
+                <div>
+                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Total a pagar</Label>
+                  <div className="mt-1 text-[#0d0f1c] font-semibold">{formatCurrency(currentRow.valor)}</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label className="text-sm font-semibold" style={{ color: '#5F6572' }}>Ordem de compra</Label>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300">ERP</span>
+                  </div>
+                  {editing ? (
+                    <Input className="mt-1 shadow-none" value={draft?.ordemCompra ?? ''} onChange={(e) => setDraft(d => d ? { ...d, ordemCompra: e.target.value } : d)} />
+                  ) : (
+                    <div className={"mt-1 " + (currentRow.ordemCompra ? "text-[#0d0f1c]" : "text-[#90949D]")}>{currentRow.ordemCompra || 'Não informado'}</div>
+                  )}
+                </div>
+                <div>
+                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Parcela</Label>
+                  {editing ? (
+                    <Input className="mt-1 shadow-none" value={draft?.parcela ?? ''} onChange={(e) => setDraft(d => d ? { ...d, parcela: e.target.value } : d)} />
+                  ) : (
+                    <div className={"mt-1 " + (currentRow.parcela ? "text-[#0d0f1c]" : "text-[#90949D]")}>{currentRow.parcela || 'Não informado'}</div>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label className="text-sm font-semibold" style={{ color: '#5F6572' }}>Centro de custo</Label>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300">ERP</span>
+                  </div>
+                  {editing ? (
+                    <Input className="mt-1 shadow-none" value={draft?.centroCusto ?? ''} onChange={(e) => setDraft(d => d ? { ...d, centroCusto: e.target.value } : d)} />
+                  ) : (
+                    <div className={"mt-1 " + (currentRow.centroCusto ? "text-[#0d0f1c]" : "text-[#90949D]")}>{currentRow.centroCusto || 'Não informado'}</div>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label className="text-sm font-semibold" style={{ color: '#5F6572' }}>Observações</Label>
+                    {currentRow.observacoes && currentRow.observacoes.startsWith('[ERP]') && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300">ERP</span>
+                    )}
+                  </div>
+                  {editing ? (
+                    <textarea
+                      className="mt-1 w-full min-h-[80px] rounded-lg border border-input bg-white p-2 text-sm shadow-none"
+                      value={draft?.observacoes ?? ''}
+                      onChange={(e) => setDraft(d => d ? { ...d, observacoes: e.target.value } : d)}
+                    />
+                  ) : (
+                    <div className={"mt-1 whitespace-pre-wrap " + (currentRow.observacoes ? "text-[#0d0f1c]" : "text-[#90949D]")}>
+                      {currentRow.observacoes ? currentRow.observacoes.replace(/^\[ERP\]\s*/, '') : 'Não informado'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Pagamento - Métodos */}
+            <div className="rounded-lg border border-border bg-white" ref={paymentMethodRef}>
+              <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                <h3 className="text-sm font-semibold text-[#0d0f1c] flex-1">Meio de pagamento</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="shrink-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Adicionar meio de pagamento</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="p-2">
+                <div
+                  role="button"
+                  aria-expanded={paymentOpen}
+                  onClick={() => setPaymentOpen(v => !v)}
+                  className="w-full flex items-center gap-3 rounded-md hover:bg-[#FAFAFF] px-3 py-3 cursor-pointer"
+                >
+                  <Barcode className="h-4 w-4 text-[#5F6572]" aria-hidden />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-[#0d0f1c] truncate">Boleto</span>
+                      <span className="inline-flex items-center h-5 px-2 rounded-full border text-xs font-medium border-emerald-200 bg-emerald-50 text-emerald-700">
+                        Pagamento preferencial
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown className={["h-4 w-4 transition-transform", paymentOpen ? "rotate-180" : ""].join(" ")} />
+                </div>
+                {paymentOpen && (
+                  <div className="px-4 pt-3 pb-3" ref={paymentContentRef}>
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Código de barras</Label>
+                          <div className="break-words">
+                            <CopyableNumber
+                              value="34191.09008 61207.954566 56772.300023 4 95640000015000"
+                              ariaLabel="Copiar código de barras"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Favorecido</Label>
+                          <div className="text-[#0d0f1c]">{getSupplier(currentRow.cnpjFornecedor)?.pagamentoPreferencial?.favorecido ?? currentRow.fornecedor}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-[#5F6572]">Essa forma é definida no cadastro do fornecedor.</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Seção Documentos Associados */}
+            <div className="rounded-lg border border-border bg-white">
+              <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                <h3 className="text-sm font-semibold text-[#0d0f1c] flex-1">Documentos Associados</h3>
+                <Button
+                  size="default"
+                  variant="ghost"
+                  className="inline-flex items-center gap-2 font-bold hover:bg-[#EFF1F2] cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Placeholder - funcionalidade será implementada futuramente
+                  }}
+                >
+                  <FilePlus2 className="h-4 w-4" aria-hidden />
+                  Associar documento
+                </Button>
+              </div>
+              <div className="p-2">
+                {currentRow.documentosAssociados && currentRow.documentosAssociados.length > 0 ? (
+                  <ul className="divide-y">
+                    {currentRow.documentosAssociados.map((d, idx) => {
+                      const Icon = d.tipo === 'Comprovante' ? Receipt : d.tipo === 'NF-e' ? Box : d.tipo === 'NFS-e' ? Briefcase : d.tipo === 'CT-e' ? Truck : Barcode;
+                      const isOpen = expandedDocs.has(idx);
+                      const assocCls = d.associacao === 'Automática'
+                        ? 'bg-[#E7EEFF] text-[#0C3CF7] border-[#B8CCFF]'
+                        : 'bg-amber-50 text-amber-700 border-amber-200';
+                      const label = `${d.tipo} ${d.numero ? `#${d.numero}` : ''}`.trim();
+
+                      return (
+                        <li key={idx} className="text-sm" data-doc-item={idx}>
+                          <div
+                            role="button"
+                            onClick={() => toggleExpansion(idx)}
+                            className="w-full flex items-center gap-3 rounded-md hover:bg-[#FAFAFF] px-3 py-3 cursor-pointer"
+                            aria-expanded={isOpen}
+                          >
+                            <Icon className="h-4 w-4 text-[#5F6572]" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-medium text-[#0d0f1c] truncate">{label}</span>
+                                <span className={["inline-flex items-center h-5 px-2 rounded-full border text-xs font-medium", assocCls].join(' ')}>
+                                  {d.associacao}
+                                </span>
+                              </div>
+                            </div>
+                            {d.tipo === 'Comprovante' && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="inline-flex items-center gap-2 font-bold mr-1"
+                                onClick={(e) => { e.stopPropagation(); onOpenComprovante(d); }}
+                              >
+                                Ver comprovante
+                              </Button>
+                            )}
+                            {d.tipo === 'NF-e' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="inline-flex items-center gap-2 font-bold mr-1"
+                                onClick={(e) => { e.stopPropagation(); onOpenDanfe(d); }}
+                              >
+                                Ver
+                              </Button>
+                            )}
+                            {d.tipo === 'Boleto' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="inline-flex items-center gap-2 font-bold mr-1"
+                                onClick={(e) => { e.stopPropagation(); onOpenBoleto(d); }}
+                              >
+                                Ver
+                              </Button>
+                            )}
+                            {d.tipo === 'NFS-e' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="inline-flex items-center gap-2 font-bold mr-1"
+                                onClick={(e) => { e.stopPropagation(); onOpenNFSe(d); }}
+                              >
+                                Ver
+                              </Button>
+                            )}
+                            {d.tipo === 'CT-e' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="inline-flex items-center gap-2 font-bold mr-1"
+                                onClick={(e) => { e.stopPropagation(); onOpenCTe(d); }}
+                              >
+                                Ver
+                              </Button>
+                            )}
+                            <ChevronDown className={["h-4 w-4 transition-transform", isOpen ? "rotate-180" : ""].join(" ")} />
+                          </div>
+                          {isOpen && (
+                            <div className="px-4 pt-3 pb-3">
+                              {d.tipo === 'NF-e' && (
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Chave de acesso</Label>
+                                    <div className="mt-1 whitespace-pre-wrap break-words pr-4">
+                                      <CopyableNumber
+                                        value={formatAccessKey(d.chaveAcesso)}
+                                        copyValue={d.chaveAcesso}
+                                        ariaLabel="Copiar chave de acesso"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data de emissão</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.data || 'Não informado'}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Forma de pagamento</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.formaPagamento || 'Não informado'}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                  </div>
+                                </div>
+                              )}
+                              {d.tipo === 'Boleto' && (
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div className="col-span-2">
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Código de barras</Label>
+                                    <div className="mt-1 whitespace-pre-wrap break-words">
+                                      <CopyableNumber
+                                        value={d.codigoBarras}
+                                        ariaLabel="Copiar código de barras"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data de emissão</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.data || 'Não informado'}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor do documento</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                  </div>
+                                </div>
+                              )}
+                              {d.tipo === 'Comprovante' && (
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Banco</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.banco || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data do pagamento</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.data || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor pago</Label>
+                                    <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <div className="px-2 py-4 text-sm text-[#90949D]">Nenhum documento associado.</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna 2 */}
+          <div className={cn(expanded ? "flex-1 space-y-4" : "contents")}>
+            {/* Seção Etapa */}
+            <div className="rounded-lg border border-border bg-white">
+              <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                <h3 className="text-sm font-semibold text-[#0d0f1c]">Etapa</h3>
+              </div>
+            <div className="p-4">
+              <div className="flex items-center gap-4">
+                {[
+                  { id: 'conferir', label: 'Conferir' },
+                  { id: 'aprovacao', label: 'Aprovar' },
+                  { id: 'pagar', label: 'Pagar' },
+                  { id: 'finalizado', label: 'Finalizado' },
+                ].map((etapa, index, array) => {
+                  const etapaMap: Record<string, string> = {
+                    'conferir': 'conferir',
+                    'aprovacao': 'aprovacao',
+                    'pagar': 'pagar',
+                    'liquidados': 'finalizado',
+                    'cancelados': 'finalizado',
+                    'bloqueados': 'conferir',
+                  };
+                  
+                  const etapaAtual = etapaMap[currentRow.lancadoEm] || 'conferir';
+                  const etapaIndex = array.findIndex(e => e.id === etapaAtual);
+                  const isActive = etapa.id === etapaAtual;
+                  const isCompleted = array.findIndex(e => e.id === etapa.id) < etapaIndex;
+                  
+                  return (
+                    <React.Fragment key={etapa.id}>
+                      <div className="flex flex-col items-center gap-2 flex-1">
+                        <div className="relative flex flex-col items-center">
+                          <div
+                            className={[
+                              'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors',
+                              isActive
+                                ? 'bg-[#0C3CF7] text-white border-[#0C3CF7]'
+                                : isCompleted
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-gray-50 text-gray-400 border-gray-200'
+                            ].join(' ')}
+                          >
+                            {isCompleted ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={[
+                            'text-xs font-medium text-center',
+                            isActive
+                              ? 'text-[#0C3CF7]'
+                              : isCompleted
+                              ? 'text-emerald-700'
+                              : 'text-[#5F6572]'
+                          ].join(' ')}
+                        >
+                          {etapa.label}
+                        </span>
+                      </div>
+                      {index < array.length - 1 && (
+                        <div
+                          className={[
+                            'h-0.5 flex-1 transition-colors',
+                            isCompleted || (isActive && index < etapaIndex)
+                              ? 'bg-emerald-200'
+                              : 'bg-gray-200'
+                          ].join(' ')}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+            {/* Seção Fornecedor */}
+            <div className="rounded-lg border border-border bg-white">
+              <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                <h3 className="text-sm font-semibold text-[#0d0f1c]">Fornecedor</h3>
+              </div>
+              <div className="p-4 grid grid-cols-2 gap-3">
+                {(() => {
+                  const s = getSupplier(currentRow.cnpjFornecedor);
+                  return (
+                    <>
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Nome</Label>
+                        <div className="mt-1 text-[#0d0f1c]">{s?.nome ?? currentRow.fornecedor}</div>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>CNPJ</Label>
+                        <div className="mt-1 text-[#0d0f1c]">{s?.cnpj ?? currentRow.cnpjFornecedor}</div>
+                      </div>
+                      {(s?.endereco || s?.cidade || s?.uf) && (
+                        <div className="col-span-2">
+                          <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Endereço</Label>
+                          <div className="mt-1 text-[#0d0f1c]">{[s?.endereco, s?.cidade, s?.uf].filter(Boolean).join(', ') || '—'}</div>
+                        </div>
+                      )}
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Telefone</Label>
+                        <div className="mt-1 text-[#0d0f1c]">{s?.telefone ?? '—'}</div>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>E-mail</Label>
+                        <div className="mt-1 text-[#0d0f1c] break-all">{s?.email ?? '—'}</div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Seção Aprovação */}
+            {currentRow.aprovacao && (
+              <div className="rounded-lg border border-border bg-white">
+                  <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+                  <h3 className="text-sm font-semibold text-[#0d0f1c]">Aprovação</h3>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Aprovador</Label>
+                    <div className={"mt-1 " + (currentRow.aprovacao.aprovador ? "text-[#0d0f1c]" : "text-[#90949D]")}>
+                      {currentRow.aprovacao.aprovador || 'Não atribuído'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Email</Label>
+                    <div className={"mt-1 " + (currentRow.aprovacao.emailAprovador ? "text-[#0d0f1c]" : "text-[#90949D]")}>
+                      {currentRow.aprovacao.emailAprovador || 'Não informado'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Status da aprovação</Label>
+                    <div className="mt-1">
+                      <span className={[
+                        'inline-flex items-center h-6 px-2 rounded-full border text-xs font-medium',
+                        currentRow.aprovacao.statusAprovacao === 'Aprovado' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        currentRow.aprovacao.statusAprovacao === 'Rejeitado' ? 'bg-red-50 text-red-700 border-red-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      ].join(' ')}>
+                        {currentRow.aprovacao.statusAprovacao}
+                      </span>
+                    </div>
+                  </div>
+                  {currentRow.aprovacao.dataEnvio && (
+                    <div>
+                      <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data de envio</Label>
+                      <div className="mt-1 text-[#0d0f1c]">{currentRow.aprovacao.dataEnvio}</div>
+                    </div>
+                  )}
+                  {currentRow.aprovacao.dataAprovacao && (
+                    <div className="col-span-2">
+                      <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data da aprovação</Label>
+                      <div className="mt-1 text-[#0d0f1c]">{currentRow.aprovacao.dataAprovacao}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+            <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+              <h3 className="text-sm font-semibold text-[#0d0f1c] flex-1">Meio de pagamento</h3>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Adicionar meio de pagamento</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="p-2">
+              <div
+                role="button"
+                aria-expanded={paymentOpen}
+                onClick={() => setPaymentOpen(v => !v)}
+                className="w-full flex items-center gap-3 rounded-md hover:bg-[#FAFAFF] px-3 py-3 cursor-pointer"
+              >
+                <Barcode className="h-4 w-4 text-[#5F6572]" aria-hidden />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-[#0d0f1c] truncate">Boleto</span>
+                    <span className="inline-flex items-center h-5 px-2 rounded-full border text-xs font-medium border-emerald-200 bg-emerald-50 text-emerald-700">
+                      Pagamento preferencial
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown className={["h-4 w-4 transition-transform", paymentOpen ? "rotate-180" : ""].join(" ")} />
+              </div>
+              {paymentOpen && (
+                <div className="px-4 pt-3 pb-3" ref={paymentContentRef}>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Código de barras</Label>
+                        <div className="break-words">
+                          <CopyableNumber 
+                            value="34191.09008 61207.954566 56772.300023 4 95640000015000" 
+                            ariaLabel="Copiar código de barras" 
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Favorecido</Label>
+                        <div className="text-[#0d0f1c]">{getSupplier(currentRow.cnpjFornecedor)?.pagamentoPreferencial?.favorecido ?? currentRow.fornecedor}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-[#5F6572]">Essa forma é definida no cadastro do fornecedor.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Seção Documentos Associados */}
+          <div className={cn("rounded-lg border border-border bg-white", expanded && "col-start-1")}>
+            <div className="px-4 py-3 border-b flex items-center gap-3 h-[62px]">
+              <h3 className="text-sm font-semibold text-[#0d0f1c] flex-1">Documentos Associados</h3>
+              <Button 
+                size="default" 
+                variant="ghost" 
+                className="inline-flex items-center gap-2 font-bold hover:bg-[#EFF1F2] cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Placeholder - funcionalidade será implementada futuramente
+                }}
+              >
+                <FilePlus2 className="h-4 w-4" aria-hidden />
+                Associar documento
+              </Button>
+            </div>
+            <div className="p-2">
+              {currentRow.documentosAssociados && currentRow.documentosAssociados.length > 0 ? (
+                <ul className="divide-y">
+                  {currentRow.documentosAssociados.map((d, idx) => {
+                    const Icon = d.tipo === 'Comprovante' ? Receipt : d.tipo === 'NF-e' ? Box : d.tipo === 'NFS-e' ? Briefcase : d.tipo === 'CT-e' ? Truck : Barcode;
+                    const isOpen = expandedDocs.has(idx);
+                    const assocCls = d.associacao === 'Automática'
+                      ? 'bg-[#E7EEFF] text-[#0C3CF7] border-[#B8CCFF]'
+                      : 'bg-amber-50 text-amber-700 border-amber-200';
+                    const label = `${d.tipo} ${d.numero ? `#${d.numero}` : ''}`.trim();
+                    
+                    return (
+                      <li key={idx} className="text-sm" data-doc-item={idx}>
+                        <div
+                          role="button"
+                          onClick={() => toggleExpansion(idx)}
+                          className="w-full flex items-center gap-3 rounded-md hover:bg-[#FAFAFF] px-3 py-3 cursor-pointer"
+                          aria-expanded={isOpen}
+                        >
+                          <Icon className="h-4 w-4 text-[#5F6572]" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium text-[#0d0f1c] truncate">{label}</span>
+                              <span className={["inline-flex items-center h-5 px-2 rounded-full border text-xs font-medium", assocCls].join(' ')}>
+                                {d.associacao}
+                              </span>
+                            </div>
+                          </div>
+                          {d.tipo === 'Comprovante' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="inline-flex items-center gap-2 font-bold mr-1"
+                              onClick={(e) => { e.stopPropagation(); onOpenComprovante(d); }}
+                            >
+                              Ver comprovante
+                            </Button>
+                          )}
+                          {d.tipo === 'NF-e' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="inline-flex items-center gap-2 font-bold mr-1"
+                              onClick={(e) => { e.stopPropagation(); onOpenDanfe(d); }}
+                            >
+                              Ver
+                            </Button>
+                          )}
+                          {d.tipo === 'Boleto' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="inline-flex items-center gap-2 font-bold mr-1"
+                              onClick={(e) => { e.stopPropagation(); onOpenBoleto(d); }}
+                            >
+                              Ver
+                            </Button>
+                          )}
+                          {d.tipo === 'NFS-e' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="inline-flex items-center gap-2 font-bold mr-1"
+                              onClick={(e) => { e.stopPropagation(); onOpenNFSe(d); }}
+                            >
+                              Ver
+                            </Button>
+                          )}
+                          {d.tipo === 'CT-e' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="inline-flex items-center gap-2 font-bold mr-1"
+                              onClick={(e) => { e.stopPropagation(); onOpenCTe(d); }}
+                            >
+                              Ver
+                            </Button>
+                          )}
+                          <ChevronDown className={["h-4 w-4 transition-transform", isOpen ? "rotate-180" : ""].join(" ")} />
+                        </div>
+                        {isOpen && (
+                          <div className="px-4 pt-3 pb-3">
+                            {d.tipo === 'NF-e' && (
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Chave de acesso</Label>
+                                  <div className="mt-1 whitespace-pre-wrap break-words pr-4">
+                                    <CopyableNumber 
+                                      value={formatAccessKey(d.chaveAcesso)} 
+                                      copyValue={d.chaveAcesso}
+                                      ariaLabel="Copiar chave de acesso" 
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data de emissão</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.data || 'Não informado'}</div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Forma de pagamento</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.formaPagamento || 'Não informado'}</div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                </div>
+                              </div>
+                            )}
+                            {d.tipo === 'Boleto' && (
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="col-span-2">
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Código de barras</Label>
+                                  <div className="mt-1 whitespace-pre-wrap break-words">
+                                    <CopyableNumber 
+                                      value={d.codigoBarras} 
+                                      ariaLabel="Copiar código de barras" 
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data de emissão</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.data || 'Não informado'}</div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor do documento</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                </div>
+                              </div>
+                            )}
+                            {d.tipo === 'Comprovante' && (
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Banco</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.banco || '—'}</div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Data do pagamento</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.data || '—'}</div>
+                                </div>
+                                <div>
+                                  <Label className="mb-1 block text-sm font-semibold" style={{ color: '#5F6572' }}>Valor pago</Label>
+                                  <div className="mt-1 text-[#0d0f1c]">{d.valor != null ? formatCurrency(d.valor) : '—'}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="px-2 py-4 text-sm text-[#90949D]">Nenhum documento associado.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}

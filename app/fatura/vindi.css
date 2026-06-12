@@ -1,0 +1,352 @@
+.vindi-root {
+  min-height: 100vh;
+  background: #f4f4f4;
+  color: #333;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.vindi-root *,
+.vindi-root *::before,
+.vindi-root *::after {
+  box-sizing: border-box;
+}
+
+.vindi-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.vindi-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.vindi-logo-link {
+  display: inline-block;
+  line-height: 0;
+  text-decoration: none;
+}
+
+.vindi-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.vindi-company {
+  max-width: 360px;
+  text-align: right;
+  font-size: 12px;
+  color: #777;
+  line-height: 1.5;
+}
+
+.vindi-company strong {
+  display: block;
+  color: #555;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.vindi-company-contact {
+  margin-top: 6px;
+}
+
+.vindi-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .vindi-content {
+    grid-template-columns: 1fr;
+  }
+
+  .vindi-company {
+    text-align: left;
+  }
+}
+
+.vindi-invoice {
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+.vindi-invoice-title {
+  padding: 10px 14px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+  font-weight: 700;
+  color: #444;
+}
+
+.vindi-table-head,
+.vindi-table-row,
+.vindi-table-subtotal,
+.vindi-table-total {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.vindi-table-head {
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.vindi-table-head span:last-child,
+.vindi-table-row span:last-child,
+.vindi-table-subtotal span:last-child,
+.vindi-table-total span:last-child {
+  text-align: right;
+}
+
+.vindi-table-row {
+  padding: 14px;
+  font-size: 13px;
+  color: #444;
+}
+
+.vindi-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vindi-item-icon {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #ccc;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.vindi-table-subtotal {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.vindi-table-subtotal span:first-child {
+  text-align: center;
+}
+
+.vindi-table-subtotal span:last-child {
+  text-align: right;
+}
+
+.vindi-table-total {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  border-bottom: none;
+  background: #d9edf7;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vindi-table-total span:first-child {
+  text-align: center;
+  text-transform: uppercase;
+  color: #31708f;
+}
+
+.vindi-table-total span:last-child {
+  text-align: right;
+  color: #5bc0de;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.vindi-payment-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #444;
+}
+
+.vindi-accordion {
+  border: 1px solid #ddd;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+.vindi-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: #f5f5f5;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vindi-accordion-header.is-closed {
+  background: #fff;
+}
+
+.vindi-accordion-body {
+  padding: 14px 12px 16px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.vindi-accordion-text {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.vindi-due-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.vindi-due-value {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+}
+
+.vindi-due-value s {
+  color: #999;
+  font-weight: 400;
+}
+
+.vindi-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.vindi-btn-primary {
+  background: #5bc0de;
+  border-color: #46b8da;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.vindi-btn-primary:hover {
+  background: #46b8da;
+}
+
+.vindi-btn-secondary {
+  background: #fff;
+  border-color: #ccc;
+  color: #555;
+}
+
+.vindi-btn-secondary:hover {
+  background: #f7f7f7;
+}
+
+.vindi-copy-feedback {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #3c763d;
+  min-height: 16px;
+}
+
+.vindi-footer {
+  margin-top: 36px;
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+}
+
+.vindi-boleto-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.vindi-boleto-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+}
+
+.vindi-boleto-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #444;
+}
+
+.vindi-boleto-code {
+  margin: 0 0 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  color: #333;
+  word-break: break-all;
+}
+
+.vindi-barcode {
+  margin-top: 16px;
+  height: 56px;
+  background: repeating-linear-gradient(
+    90deg,
+    #111 0,
+    #111 2px,
+    #fff 2px,
+    #fff 4px,
+    #111 4px,
+    #111 5px,
+    #fff 5px,
+    #fff 8px
+  );
+}
+
+.vindi-back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #5bc0de;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.vindi-back-link:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,529 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+
+/* Nitti font (from public/figma-assets) */
+@font-face {
+  font-family: 'Nitti';
+  src: url('/figma-assets/nitti-cufonfonts/Nitti-Normal.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nitti';
+  src: url('/figma-assets/nitti-cufonfonts/Nitti-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tailwind v4 theme tokens (make classes like bg-background work) */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* App-specific */
+  --color-brand: hsl(var(--brand));
+  --color-brand-fg: hsl(var(--brand-fg));
+}
+
+/* Base typography (can be tuned to Figma) */
+@layer base {
+  h1 { @apply scroll-m-20 text-2xl font-semibold tracking-tight; }
+  h2 { @apply scroll-m-20 text-xl font-semibold tracking-tight; }
+  h3 { @apply scroll-m-20 text-lg font-semibold tracking-tight; }
+  h4 { @apply scroll-m-20 text-base font-medium; }
+  p  { @apply leading-7; }
+  small { @apply text-xs text-muted-foreground; }
+}
+
+/* Reusable navigation styles */
+@layer components {
+  /* Access bar removed: .access-icon styles deleted */
+  /* Typography tokens (approximate mapping to Figma names) */
+  .t-title-6 { @apply text-lg font-semibold leading-6 tracking-tight; }
+  .t-text-md { @apply text-base font-medium leading-5; }
+  .t-text-sm { @apply text-sm font-medium leading-5; }
+  .t-text-sm-regular { @apply text-sm font-normal leading-5; }
+  .t-text-xs { @apply text-xs font-normal leading-4; }
+  .t-text-xs-bold { @apply text-xs font-semibold leading-4; }
+
+  .nav-icon-btn {
+    @apply relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+  .nav-icon-btn.is-active {
+    @apply bg-accent text-accent-foreground border-border;
+  }
+
+  .sidebar-item {
+    @apply flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium;
+    color: #71717c; /* itens não selecionados */
+    background: transparent;
+  }
+  .sidebar-item:hover {
+    background: #EAEBEC; /* hover igual ao selecionado */
+    color: #71717c;
+  }
+  .sidebar-item.is-active {
+    background: #EAEBEC; /* fundo seleção */
+    color: #0d0f1c;    /* texto/ícone selecionados */
+    font-weight: 600;  /* destaque visual do item ativo */
+  }
+  /* Garante que ícones com utilitário Tailwind herdem a cor do item */
+  .sidebar-item .text-muted-foreground { color: inherit; }
+
+  /* Títulos de seções na navegação */
+  .sidebar-section { color: #90949D; }
+
+  /* Collapsed behavior (slide left leaving 16px visible) */
+  .sidebar-collapsed .sidebar-panel { transform: translateX(calc(-256px + 16px)); }
+  .design-system-sidebar-collapsed .sidebar-panel { transform: translateX(calc(-256px + 16px)); }
+
+  /* Keep labels; only 16px are visible when collapsed, so hiding is unnecessary */
+
+  /* Card title styling */
+  .card-title {
+    font-family: 'Nitti', ui-sans-serif, system-ui, sans-serif;
+    color: #71717c;
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+
+  /* Sidebar flyout overlay behavior when collapsed */
+  .sidebar-panel {
+    transition: transform 300ms ease, opacity 300ms ease;
+    /* default pinned spacing (overridden by .sidebar-wrap) */
+    margin-left: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+  /* When wrapped with padding, remove internal margins to avoid double spacing */
+  .sidebar-wrap .sidebar-panel { margin: 0; }
+  /* Collapsed/hover flyout removed along with Access bar */
+
+  /* Hover bridge removed */
+}
+
+/* Collapse behavior for sidebar (2ª coluna) */
+/* Collapsed grid adjustment removed */
+
+/* Slide-out animation for the navigation pane (inner fixed-width wrapper) */
+.nav-slide {
+  transition: transform 300ms ease, opacity 300ms ease;
+  will-change: transform;
+}
+
+/* App grid adapts when sidebar is collapsed */
+.app-grid { /* default via Tailwind classes */ }
+.sidebar-collapsed .app-grid { grid-template-columns: 16px 1fr; column-gap: 24px; }
+.design-system-sidebar-collapsed .app-grid { grid-template-columns: 16px 1fr; column-gap: 24px; }
+/* Remove old slide-out for inner wrapper; overlay behavior handled by .sidebar-panel */
+/* Collapsed nav-slide removed */
+
+/* Collapse chevron styles removed */
+
+/* CSS variables that Tailwind consumes via theme extension */
+:root {
+  /* HSL tokens so we can control alpha via Tailwind */
+  /* bg from Figma: Surfaces/white (#FFFFFF) */
+  --bg: 0 0% 100%;
+  /* fg from Figma: Text/gray-opacity-primary (#040E23) -> hsl(221 80% 8%) */
+  --fg: 221 80% 8%;
+  /* brand from Figma: Branding/primary-darkest (#D13200) -> hsl(14 100% 41%) */
+  --brand: 14 100% 41%;
+  --brand-fg: 0 0% 100%;
+}
+
+html, body { height: 100%; }
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Remove global focus ring */
+:where(a, button, [role="button"], input, textarea, select):focus-visible { outline: none; }
+
+/* Override Figma-exported arbitrary font classes so Inter applies */
+[class*="font-['Inter:"] {
+  font-family: inherit !important;
+}
+
+/* shadcn/ui color variables mapped to our tokens */
+@layer base {
+  :root {
+    /* Header height used for flyout offsets */
+    --header-h: 48px;
+    /* Valores HSL crús (sem envolver em hsl()) para funcionar com Tailwind hsl(var(--token) / <alpha>) */
+    --background: var(--bg);
+    --foreground: var(--fg);
+
+    --card: var(--bg);
+    --card-foreground: var(--fg);
+
+    --popover: var(--bg);
+    --popover-foreground: var(--fg);
+
+    /* Primary buttons color (#0C3CF7 -> hsl(228 94% 51%)) */
+    --primary: 228 94% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Unifica as bordas com a divisória acesso/navegação (#e9e6e2 -> hsl(34 14% 90%)) */
+    --border: 34 14% 90%;
+    --input: 34 14% 90%;
+    --ring: var(--primary);
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Estilos customizados para snackbars (Sonner) */
+[data-sonner-toaster] {
+  --width: auto !important;
+  --mobile-offset: 0px !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toaster] > * {
+  pointer-events: auto !important;
+}
+
+[data-sonner-toast] {
+  border-radius: 12px !important;
+  padding: 16px !important;
+  min-width: 320px !important;
+  width: auto !important;
+  max-width: calc(100vw - 32px) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 0 auto !important;
+}
+
+
+/* Título e descrição do toast */
+[data-sonner-toast] [data-title] {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 14px !important;
+  line-height: 20px !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+[data-sonner-toast] [data-content] {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+/* Conteúdo do toast de sucesso - sem gap pois não tem título */
+[data-sonner-toast][data-type="success"] [data-content] {
+  gap: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Ícone do toast */
+[data-sonner-toast] [data-icon] {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Botão de fechar */
+[data-sonner-toast] [data-close-button] {
+  flex-shrink: 0 !important;
+}
+
+/* Estilo dos botões de ação nos toasts */
+[data-sonner-toast] [data-button] {
+  padding: 6px 12px !important;
+  height: auto !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Toast de sucesso - fundo verde escuro */
+[data-sonner-toast][data-type="success"] {
+  display: inline-flex !important;
+  padding: 16px !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-radius: 16px !important;
+  background: #054318 !important;
+  box-shadow: 0 4px 12px 0 rgba(4, 14, 35, 0.16) !important;
+  color: white !important;
+  border: none !important;
+  min-width: 320px !important;
+  width: auto !important;
+  max-width: calc(100vw - 32px) !important;
+  margin: 0 auto !important;
+}
+
+/* Estilo do conteúdo no toast de sucesso - aplica tanto para título quanto descrição */
+[data-sonner-toast][data-type="success"] [data-description],
+[data-sonner-toast][data-type="success"] [data-title] {
+  color: #FFF !important;
+  font-feature-settings: 'liga' off, 'clig' off !important;
+  font-family: Inter, sans-serif !important;
+  font-size: 14px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* Esconder título quando há descrição (para evitar duplicação) */
+[data-sonner-toast][data-type="success"] [data-content]:has([data-description]) [data-title] {
+  display: none !important;
+}
+
+/* Ícone de sucesso - outline, 24x24px, cor #B5ECC5 */
+[data-sonner-toast][data-type="success"] [data-icon] {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #B5ECC5 !important;
+}
+
+/* Ajustar o SVG do ícone para ser outline */
+[data-sonner-toast][data-type="success"] [data-icon] svg {
+  width: 24px !important;
+  height: 24px !important;
+  stroke: #B5ECC5 !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+}
+
+/* Toast de erro - fundo vermelho escuro */
+[data-sonner-toast][data-type="error"] {
+  display: inline-flex !important;
+  padding: 16px !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-radius: 16px !important;
+  background: #7F1D1D !important;
+  box-shadow: 0 4px 12px 0 rgba(4, 14, 35, 0.16) !important;
+  color: white !important;
+  border: none !important;
+  min-width: 320px !important;
+  width: auto !important;
+  max-width: calc(100vw - 32px) !important;
+  margin: 0 auto !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-description],
+[data-sonner-toast][data-type="error"] [data-title] {
+  color: #FFF !important;
+  font-feature-settings: 'liga' off, 'clig' off !important;
+  font-family: Inter, sans-serif !important;
+  font-size: 14px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-content]:has([data-description]) [data-title] {
+  display: none !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-content] {
+  gap: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #FECACA !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] svg {
+  width: 24px !important;
+  height: 24px !important;
+  stroke: #FECACA !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+}
+
+/* Toast de processamento/progresso - fundo azul */
+[data-sonner-toast]:has(.toast-processing) {
+  background-color: #0C3CF7 !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Toast padrão (sem tipo específico) - fundo neutro escuro */
+[data-sonner-toast]:not([data-type]) {
+  background-color: #1f2937 !important;
+  color: white !important;
+  border: none !important;
+}
+
+[data-sonner-toast]:not([data-type]) [data-title],
+[data-sonner-toast]:not([data-type]) [data-description] {
+  color: white !important;
+}
+
+[data-sonner-toast]:not([data-type]) [data-icon] {
+  color: white !important;
+}
+
+/* Animação para linhas novas na tabela */
+@keyframes highlight {
+  0% {
+    background-color: rgba(12, 60, 247, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(12, 60, 247, 0.12);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+/* Scrollbars utilitários: ocultas por padrão, visíveis em interação */
+@layer utilities {
+  /* Screen reader only - esconde visualmente mas mantém acessível */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Sempre ocultar scrollbars (inclusive body, se aplicado) */
+  .scrollbars-hidden,
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE/Edge legado */
+    scrollbar-width: none;    /* Firefox */
+  }
+  .scrollbars-hidden::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Safari/Chrome */
+    width: 0;
+    height: 0;
+  }
+
+  /* Oculta por padrão, mostra em hover/focus do contêiner */
+  .scrollbars-hover {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbars-hover::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  .scrollbars-hover:hover,
+  .scrollbars-hover:focus,
+  .scrollbars-hover:focus-within {
+    scrollbar-width: thin; /* Firefox exibe apenas quando interagir */
+  }
+  .scrollbars-hover:hover::-webkit-scrollbar,
+  .scrollbars-hover:focus::-webkit-scrollbar,
+  .scrollbars-hover:focus-within::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbars-hover::-webkit-scrollbar-thumb {
+    background-color: rgba(4, 14, 35, 0.24);
+    border-radius: 9999px;
+    border: 2px solid transparent; /* aumenta área de click sem engrossar o thumb */
+    background-clip: content-box;
+  }
+  .scrollbars-hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
