@@ -55,6 +55,5 @@ export const COMPRAS_ANALISES_MENU_ITEMS: MenuItem[] = [
 ];
 
 export const COMPRAS_RELATORIOS_MENU_ITEMS: MenuItem[] = [
-  { label: "Conciliação Fiscal Tríplice", href: "/compras/conciliacao-fiscal-triplice" },
   { label: "Controle de Devolução", href: "/compras/controle-de-devolucao" },
 ];
