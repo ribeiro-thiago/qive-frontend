@@ -32,6 +32,7 @@ const defaultConfig: FeaturesConfig = {
     comprovantes: true,
     "contas-a-receber": true,
     "reforma-tributaria": true,
+    "conciliacao-fiscal-triplice": true,
     "erros-em-notas": false,
     "painel-conexoes": false,
     "confere-chaves": false,

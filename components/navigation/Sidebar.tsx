@@ -90,6 +90,13 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
+    id: "fiscal-relatorios",
+    label: "Relatórios",
+    items: [
+      { label: "Conciliação Fiscal Tríplice", href: "/fiscal/conciliacao-fiscal-triplice" },
+    ],
+  },
+  {
     id: "captura-envio",
     label: "Captura e envio",
     items: [
@@ -150,6 +157,7 @@ function getProductKeyFromHref(href: string): string | null {
     "/compras/custos-de-transporte": "custos-de-transporte",
     "/compras/preco-de-produto": "preco-de-produto",
     "/compras/controle-de-devolucao": "controle-de-devolucao",
+    "/fiscal/conciliacao-fiscal-triplice": "conciliacao-fiscal-triplice",
     "/fiscal/reforma-tributaria": "reforma-tributaria",
     "/fiscal/erros-em-notas": "erros-em-notas",
     "/fiscal/painel-conexoes": "painel-conexoes",

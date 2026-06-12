@@ -104,6 +104,13 @@ const MENU_SECTIONS = [
     ],
   },
   {
+    id: "fiscal-relatorios",
+    label: "Relatórios",
+    items: [
+      { label: "Conciliação Fiscal Tríplice", href: "/fiscal/conciliacao-fiscal-triplice", productKey: "conciliacao-fiscal-triplice" },
+    ],
+  },
+  {
     id: "relatorios",
     label: "Relatórios",
     items: [
@@ -129,6 +136,7 @@ const PRODUCT_DESCRIPTIONS: Record<string, string> = {
   comprovantes: "Visualização e importação de comprovantes de pagamento",
   "contas-a-receber": "Gerenciamento de contas a receber",
   "reforma-tributaria": "Acompanhamento da reforma tributária",
+  "conciliacao-fiscal-triplice": "Conciliação fiscal tríplice (Fiscal)",
   "erros-em-notas": "Monitoramento de inconsistências em notas fiscais",
   "painel-conexoes": "Visão consolidada de integrações e conexões fiscais",
   "confere-chaves": "Validação de chaves de documentos fiscais",
