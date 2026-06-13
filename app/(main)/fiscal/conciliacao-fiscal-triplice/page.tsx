@@ -21,8 +21,11 @@ import { cn } from "@/lib/utils";
 type ReconciliationStatus =
   | "Conciliado"
   | "Divergência de Valores"
+  | "Não Encontrado na Qive"
   | "Não Encontrado no ERP"
-  | "Não Encontrado no Fisco";
+  | "Não Encontrado no IBS"
+  | "Não Encontrado no CBS"
+  | "Não Encontrado na Apuração Assistida";
 
 type TaxValues = {
   vIBSUF: number;
@@ -36,77 +39,114 @@ type ReconciliationRow = {
   empresa: string;
   filial: string;
   emissao: string;
-  tipoDocumento: "CT-e" | "NF-e" | "NFS-e";
-  qive: TaxValues;
+  tipoDocumento: DocumentType;
+  qive: TaxValues | null;
+  apuracaoIbs: Pick<TaxValues, "vIBSUF" | "vIBSMUN"> | null;
+  apuracaoCbs: Pick<TaxValues, "vCBS"> | null;
   erp: TaxValues | null;
-  gov: TaxValues | null;
 };
+
+type DocumentType = "CT-e" | "NF-e" | "NFS-e Nacional";
 
 const STATUS_OPTIONS: Array<ReconciliationStatus | "Todos"> = [
   "Todos",
   "Conciliado",
   "Divergência de Valores",
+  "Não Encontrado na Qive",
   "Não Encontrado no ERP",
-  "Não Encontrado no Fisco",
+  "Não Encontrado no IBS",
+  "Não Encontrado no CBS",
+  "Não Encontrado na Apuração Assistida",
 ];
+
+const DOCUMENT_TYPE_OPTIONS: Array<DocumentType | "Todos"> = ["Todos", "NF-e", "CT-e", "NFS-e Nacional"];
 
 const BRANCH_OPTIONS = ["Todas", "Matriz SP", "Filial RJ", "Filial MG"];
 
 const RECONCILIATION_ROWS: ReconciliationRow[] = [
   {
-    chaveAcesso: "3526 0601 2345 6700 0199 5500 1000 1234 8910 0001 0018",
+    chaveAcesso: "35260601234567000199550010001234891000010018",
     status: "Conciliado",
     empresa: "Qive Tecnologia Ltda.",
     filial: "Matriz SP",
     emissao: "04/06/2026",
     tipoDocumento: "NF-e",
     qive: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
+    apuracaoIbs: { vIBSUF: 42.18, vIBSMUN: 18.06 },
+    apuracaoCbs: { vCBS: 128.42 },
     erp: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
-    gov: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
   },
   {
-    chaveAcesso: "3326 0608 4444 1200 0175 5500 1000 9988 7710 0005 4821",
+    chaveAcesso: "33260608444412000175570010009988771000054821",
     status: "Divergência de Valores",
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial RJ",
     emissao: "05/06/2026",
     tipoDocumento: "CT-e",
     qive: { vIBSUF: 88.9, vIBSMUN: 31.1, vCBS: 241.7 },
+    apuracaoIbs: { vIBSUF: 88.9, vIBSMUN: 31.1 },
+    apuracaoCbs: { vCBS: 241.7 },
     erp: { vIBSUF: 80.9, vIBSMUN: 31.1, vCBS: 219.7 },
-    gov: { vIBSUF: 88.9, vIBSMUN: 31.1, vCBS: 241.7 },
   },
   {
-    chaveAcesso: "3126 0602 9988 7700 0194 5500 1000 4567 1210 0008 1140",
+    chaveAcesso: "35503081234567800019900000000001234567012345678901",
     status: "Não Encontrado no ERP",
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial MG",
     emissao: "06/06/2026",
-    tipoDocumento: "NFS-e",
+    tipoDocumento: "NFS-e Nacional",
     qive: { vIBSUF: 16.34, vIBSMUN: 7.88, vCBS: 59.32 },
+    apuracaoIbs: { vIBSUF: 16.34, vIBSMUN: 7.88 },
+    apuracaoCbs: { vCBS: 59.32 },
     erp: null,
-    gov: { vIBSUF: 16.34, vIBSMUN: 7.88, vCBS: 59.32 },
   },
   {
-    chaveAcesso: "3526 0609 1020 3040 0191 5500 1000 2200 3410 0003 7806",
-    status: "Não Encontrado no Fisco",
+    chaveAcesso: "35260609102030400091550010002200341000037806",
+    status: "Não Encontrado na Apuração Assistida",
     empresa: "Qive Tecnologia Ltda.",
     filial: "Matriz SP",
     emissao: "07/06/2026",
     tipoDocumento: "NF-e",
     qive: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
+    apuracaoIbs: null,
+    apuracaoCbs: null,
     erp: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
-    gov: null,
   },
   {
-    chaveAcesso: "3326 0610 4567 8900 0181 5500 1000 7766 5410 0012 3402",
-    status: "Divergência de Valores",
+    chaveAcesso: "33260610456789000181570010007766541000123402",
+    status: "Não Encontrado no IBS",
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial RJ",
     emissao: "08/06/2026",
     tipoDocumento: "CT-e",
     qive: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
-    erp: { vIBSUF: 102.44, vIBSMUN: 39.18, vCBS: 299.7 },
-    gov: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
+    apuracaoIbs: null,
+    apuracaoCbs: { vCBS: 305.7 },
+    erp: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
+  },
+  {
+    chaveAcesso: "35503081234567800019900000000001234567012345678902",
+    status: "Não Encontrado no CBS",
+    empresa: "Qive Tecnologia Ltda.",
+    filial: "Filial MG",
+    emissao: "09/06/2026",
+    tipoDocumento: "NFS-e Nacional",
+    qive: { vIBSUF: 24.1, vIBSMUN: 9.4, vCBS: 77.8 },
+    apuracaoIbs: { vIBSUF: 24.1, vIBSMUN: 9.4 },
+    apuracaoCbs: null,
+    erp: { vIBSUF: 24.1, vIBSMUN: 9.4, vCBS: 77.8 },
+  },
+  {
+    chaveAcesso: "35260601987654000123550010000043211000098765",
+    status: "Não Encontrado na Qive",
+    empresa: "Qive Tecnologia Ltda.",
+    filial: "Matriz SP",
+    emissao: "10/06/2026",
+    tipoDocumento: "NF-e",
+    qive: null,
+    apuracaoIbs: { vIBSUF: 61.2, vIBSMUN: 22.4 },
+    apuracaoCbs: { vCBS: 184.55 },
+    erp: { vIBSUF: 61.2, vIBSMUN: 22.4, vCBS: 184.55 },
   },
 ];
 
@@ -130,8 +170,30 @@ function getValuesDelta(a: TaxValues | null, b: TaxValues | null): number {
   }, 0);
 }
 
+function getApuracaoValues(row: ReconciliationRow): TaxValues | null {
+  if (!row.apuracaoIbs || !row.apuracaoCbs) return null;
+
+  return {
+    vIBSUF: row.apuracaoIbs.vIBSUF,
+    vIBSMUN: row.apuracaoIbs.vIBSMUN,
+    vCBS: row.apuracaoCbs.vCBS,
+  };
+}
+
+function getApuracaoDisplayValues(row: ReconciliationRow): Partial<Record<keyof TaxValues, number | null>> | null {
+  if (!row.apuracaoIbs && !row.apuracaoCbs) return null;
+
+  return {
+    vIBSUF: row.apuracaoIbs?.vIBSUF ?? null,
+    vIBSMUN: row.apuracaoIbs?.vIBSMUN ?? null,
+    vCBS: row.apuracaoCbs?.vCBS ?? null,
+  };
+}
+
 function getMaxDelta(row: ReconciliationRow): number {
-  return Math.max(getValuesDelta(row.qive, row.erp), getValuesDelta(row.qive, row.gov));
+  if (!row.qive) return 0;
+
+  return Math.max(getValuesDelta(row.qive, row.erp), getValuesDelta(row.qive, getApuracaoValues(row)));
 }
 
 function getStatusTagClasses(status: ReconciliationStatus) {
@@ -162,7 +224,7 @@ function StatusTag({ status }: { status: ReconciliationStatus }) {
   return <Tag {...getStatusTagClasses(status)}>{status}</Tag>;
 }
 
-function TaxValueCells({ values, groupStart = false }: { values: TaxValues | null; groupStart?: boolean }) {
+function TaxValueCells({ values, groupStart = false }: { values: Partial<Record<keyof TaxValues, number | null>> | null; groupStart?: boolean }) {
   return (
     <>
       {TAX_KEYS.map((key, index) => (
@@ -215,6 +277,7 @@ function SelectField({
 export default function ConciliacaoFiscalTriplicePage() {
   const [statusFilter, setStatusFilter] = React.useState<string>("Todos");
   const [branchFilter, setBranchFilter] = React.useState("Todas");
+  const [documentTypeFilter, setDocumentTypeFilter] = React.useState<string>("Todos");
   const [search, setSearch] = React.useState("");
   const [selectedRow, setSelectedRow] = React.useState<ReconciliationRow | null>(null);
 
@@ -224,15 +287,16 @@ export default function ConciliacaoFiscalTriplicePage() {
     return RECONCILIATION_ROWS.filter((row) => {
       const matchesStatus = statusFilter === "Todos" || row.status === statusFilter;
       const matchesBranch = branchFilter === "Todas" || row.filial === branchFilter;
+      const matchesDocumentType = documentTypeFilter === "Todos" || row.tipoDocumento === documentTypeFilter;
       const matchesSearch =
         !normalizedSearch ||
         row.chaveAcesso.toLowerCase().includes(normalizedSearch) ||
         row.filial.toLowerCase().includes(normalizedSearch) ||
         row.status.toLowerCase().includes(normalizedSearch);
 
-      return matchesStatus && matchesBranch && matchesSearch;
+      return matchesStatus && matchesBranch && matchesDocumentType && matchesSearch;
     });
-  }, [branchFilter, search, statusFilter]);
+  }, [branchFilter, documentTypeFilter, search, statusFilter]);
 
   const metrics = React.useMemo(() => {
     const totalOk = RECONCILIATION_ROWS.filter((row) => row.status === "Conciliado").length;
@@ -240,7 +304,7 @@ export default function ConciliacaoFiscalTriplicePage() {
       (row) => row.status === "Divergência de Valores",
     ).length;
     const totalLimbo = RECONCILIATION_ROWS.filter(
-      (row) => row.status === "Não Encontrado no ERP" || row.status === "Não Encontrado no Fisco",
+      (row) => row.status.startsWith("Não Encontrado"),
     ).length;
 
     return {
@@ -253,16 +317,16 @@ export default function ConciliacaoFiscalTriplicePage() {
 
   const selectedDifferences = selectedRow
     ? TAX_KEYS.flatMap((key) => {
-        const xmlValue = selectedRow.qive[key];
+        const xmlValue = selectedRow.qive?.[key] ?? null;
         const erpValue = selectedRow.erp?.[key] ?? null;
-        const govValue = selectedRow.gov?.[key] ?? null;
-        const erpDelta = erpValue === null ? null : xmlValue - erpValue;
-        const govDelta = govValue === null ? null : xmlValue - govValue;
+        const apuracaoValue = getApuracaoDisplayValues(selectedRow)?.[key] ?? null;
+        const erpDelta = xmlValue === null || erpValue === null ? null : xmlValue - erpValue;
+        const apuracaoDelta = xmlValue === null || apuracaoValue === null ? null : xmlValue - apuracaoValue;
 
         return [
+          { origin: "Apuração Assistida", key, expected: xmlValue, current: apuracaoValue, delta: apuracaoDelta },
           { origin: "ERP", key, expected: xmlValue, current: erpValue, delta: erpDelta },
-          { origin: "Apuração Assistida", key, expected: xmlValue, current: govValue, delta: govDelta },
-        ].filter((item) => item.current === null || Math.abs(item.delta ?? 0) > 0.009);
+        ].filter((item) => item.expected === null || item.current === null || Math.abs(item.delta ?? 0) > 0.009);
       })
     : [];
 
@@ -285,21 +349,22 @@ export default function ConciliacaoFiscalTriplicePage() {
       </header>
 
       <Card className="rounded-xl border border-[rgba(4,14,35,0.08)] bg-white">
-        <CardContent className="grid gap-4 p-4 md:grid-cols-3">
+        <CardContent className="grid gap-4 p-4 md:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="periodo">Período</Label>
             <Input id="periodo" type="text" value="01/06/2026 - 30/06/2026" readOnly />
           </div>
           <SelectField id="filial" label="Filial" value={branchFilter} onChange={setBranchFilter} options={BRANCH_OPTIONS} />
           <SelectField id="status" label="Status do Batimento" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+          <SelectField id="tipo-documento" label="Tipo de documento" value={documentTypeFilter} onChange={setDocumentTypeFilter} options={DOCUMENT_TYPE_OPTIONS} />
         </CardContent>
       </Card>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <BigNumberCard value={metrics.totalChaves} label="Chaves Processadas" disableWhenZero={false} />
-        <BigNumberCard value={metrics.totalOk} label="Chaves Conciliadas" disableWhenZero={false} className="bg-[#F7FCF9]" />
+        <BigNumberCard value={metrics.totalChaves} label="Documentos Processados" disableWhenZero={false} />
+        <BigNumberCard value={metrics.totalOk} label="Documentos Conciliados" disableWhenZero={false} className="bg-[#F7FCF9]" />
         <BigNumberCard value={metrics.totalDivergencias} label="Divergência de Valores" disableWhenZero={false} className="bg-[#FFF8F8]" />
-        <BigNumberCard value={metrics.totalLimbo} label="Gargalo/Limbo Documental" disableWhenZero={false} className="bg-[#FFFBF0]" />
+        <BigNumberCard value={metrics.totalLimbo} label="Documentos Não Encontrados" disableWhenZero={false} className="bg-[#FFFBF0]" />
       </div>
 
       <Card className="overflow-hidden rounded-xl border border-[rgba(4,14,35,0.08)] bg-white">
@@ -328,9 +393,9 @@ export default function ConciliacaoFiscalTriplicePage() {
                   <th rowSpan={2} className="w-[280px] px-3 py-3">Chave de Acesso</th>
                   <th rowSpan={2} className="w-[180px] px-3 py-3">Status</th>
                   <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Qive (XML)</th>
-                  <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
                   <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Apuração Assistida</th>
-                  <th rowSpan={2} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right">Divergência Max</th>
+                  <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
+                  <th rowSpan={2} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right">Divergência</th>
                 </tr>
                 <tr className="border-b border-[rgba(4,14,35,0.08)] bg-[#F8F9FB] text-xs font-bold text-[#5B616F]">
                   {Array.from({ length: 3 }).map((_, groupIndex) =>
@@ -368,8 +433,8 @@ export default function ConciliacaoFiscalTriplicePage() {
                       </td>
                       <td className="px-3 py-3 align-top"><StatusTag status={row.status} /></td>
                       <TaxValueCells values={row.qive} groupStart />
+                      <TaxValueCells values={getApuracaoDisplayValues(row)} groupStart />
                       <TaxValueCells values={row.erp} groupStart />
-                      <TaxValueCells values={row.gov} groupStart />
                       <td className="whitespace-nowrap border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right font-bold text-[#0d0f1c]">
                         {formatCurrency(getMaxDelta(row))}
                       </td>
@@ -381,7 +446,7 @@ export default function ConciliacaoFiscalTriplicePage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-[rgba(4,14,35,0.08)] px-4 py-3 text-sm text-[#5B616F]">
-            <span>{filteredRows.length} chaves exibidas</span>
+            <span>{filteredRows.length} documentos exibidos</span>
             <span>Página 1 de 1</span>
           </div>
         </CardContent>
@@ -392,7 +457,7 @@ export default function ConciliacaoFiscalTriplicePage() {
           <SheetHeader>
             <div>
               <SheetTitle>De → Para da divergência</SheetTitle>
-              <SheetDescription>Detalhamento por origem e campo fiscal da chave selecionada.</SheetDescription>
+              <SheetDescription>Detalhamento por origem e campo fiscal do documento selecionado.</SheetDescription>
             </div>
             <SheetClose asChild>
               <Button variant="secondary" size="sm">Fechar</Button>
@@ -424,7 +489,7 @@ export default function ConciliacaoFiscalTriplicePage() {
                           <p className="text-xs text-[#5B616F]">Comparação contra Qive (XML)</p>
                         </div>
                         <Tag bgColor="bg-[#FDECEC]" textColor="text-[#B42318]" borderColor="border-[#F7C5C2]">
-                          Δ {formatCurrency(Math.abs(difference.delta ?? difference.expected))}
+                          Δ {formatCurrency(Math.abs(difference.delta ?? difference.expected ?? 0))}
                         </Tag>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
