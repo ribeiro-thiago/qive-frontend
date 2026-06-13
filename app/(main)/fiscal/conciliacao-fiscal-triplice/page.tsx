@@ -36,6 +36,7 @@ type ReconciliationRow = {
   empresa: string;
   filial: string;
   emissao: string;
+  tipoDocumento: "CT-e" | "NF-e" | "NFS-e";
   qive: TaxValues;
   erp: TaxValues | null;
   gov: TaxValues | null;
@@ -58,6 +59,7 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = [
     empresa: "Qive Tecnologia Ltda.",
     filial: "Matriz SP",
     emissao: "04/06/2026",
+    tipoDocumento: "NF-e",
     qive: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
     erp: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
     gov: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
@@ -68,6 +70,7 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = [
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial RJ",
     emissao: "05/06/2026",
+    tipoDocumento: "CT-e",
     qive: { vIBSUF: 88.9, vIBSMUN: 31.1, vCBS: 241.7 },
     erp: { vIBSUF: 80.9, vIBSMUN: 31.1, vCBS: 219.7 },
     gov: { vIBSUF: 88.9, vIBSMUN: 31.1, vCBS: 241.7 },
@@ -78,6 +81,7 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = [
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial MG",
     emissao: "06/06/2026",
+    tipoDocumento: "NFS-e",
     qive: { vIBSUF: 16.34, vIBSMUN: 7.88, vCBS: 59.32 },
     erp: null,
     gov: { vIBSUF: 16.34, vIBSMUN: 7.88, vCBS: 59.32 },
@@ -88,6 +92,7 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = [
     empresa: "Qive Tecnologia Ltda.",
     filial: "Matriz SP",
     emissao: "07/06/2026",
+    tipoDocumento: "NF-e",
     qive: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
     erp: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
     gov: null,
@@ -98,6 +103,7 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = [
     empresa: "Qive Tecnologia Ltda.",
     filial: "Filial RJ",
     emissao: "08/06/2026",
+    tipoDocumento: "CT-e",
     qive: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
     erp: { vIBSUF: 102.44, vIBSMUN: 39.18, vCBS: 299.7 },
     gov: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
@@ -279,21 +285,13 @@ export default function ConciliacaoFiscalTriplicePage() {
       </header>
 
       <Card className="rounded-xl border border-[rgba(4,14,35,0.08)] bg-white">
-        <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-5">
+        <CardContent className="grid gap-4 p-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="periodo">Período</Label>
             <Input id="periodo" type="text" value="01/06/2026 - 30/06/2026" readOnly />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="empresa">Empresa</Label>
-            <Input id="empresa" type="text" value="Qive Tecnologia Ltda." readOnly />
-          </div>
           <SelectField id="filial" label="Filial" value={branchFilter} onChange={setBranchFilter} options={BRANCH_OPTIONS} />
           <SelectField id="status" label="Status do Batimento" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
-          <div className="space-y-2">
-            <Label htmlFor="tolerancia">Margem de Tolerância (R$)</Label>
-            <Input id="tolerancia" type="number" min="0" step="0.01" defaultValue="0.05" />
-          </div>
         </CardContent>
       </Card>
 
@@ -366,7 +364,7 @@ export default function ConciliacaoFiscalTriplicePage() {
                     >
                       <td className="px-3 py-3 align-top">
                         <div className="font-mono text-xs font-semibold text-[#0d0f1c]">{row.chaveAcesso}</div>
-                        <div className="mt-1 text-xs text-[#5B616F]">{row.filial} · emissão {row.emissao}</div>
+                        <div className="mt-1 text-xs text-[#5B616F]">emissão {row.emissao} · {row.tipoDocumento}</div>
                       </td>
                       <td className="px-3 py-3 align-top"><StatusTag status={row.status} /></td>
                       <TaxValueCells values={row.qive} groupStart />
@@ -445,7 +443,7 @@ export default function ConciliacaoFiscalTriplicePage() {
               ) : (
                 <div className="flex items-start gap-3 rounded-lg border border-[#B9E8CB] bg-[#F7FCF9] p-3 text-sm text-[#137A3A]">
                   <CheckCircle2 className="mt-0.5 h-4 w-4" />
-                  Nenhuma divergência acima da tolerância configurada.
+                  Nenhuma divergência identificada para a chave selecionada.
                 </div>
               )}
             </div>
