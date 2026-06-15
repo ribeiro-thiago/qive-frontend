@@ -93,7 +93,7 @@ const MENU_SECTIONS: MenuSection[] = [
     id: "fiscal-relatorios",
     label: "Relatórios",
     items: [
-      { label: "Conciliação Fiscal Tríplice", href: "/fiscal/conciliacao-fiscal-triplice" },
+      { label: "Conciliação Fiscal", href: "/fiscal/conciliacao-fiscal-triplice" },
     ],
   },
   {
