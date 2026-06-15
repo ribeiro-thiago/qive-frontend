@@ -107,7 +107,7 @@ const MENU_SECTIONS = [
     id: "fiscal-relatorios",
     label: "Relatórios",
     items: [
-      { label: "Conciliação Fiscal Tríplice", href: "/fiscal/conciliacao-fiscal-triplice", productKey: "conciliacao-fiscal-triplice" },
+      { label: "Conciliação Fiscal", href: "/fiscal/conciliacao-fiscal-triplice", productKey: "conciliacao-fiscal-triplice" },
     ],
   },
   {

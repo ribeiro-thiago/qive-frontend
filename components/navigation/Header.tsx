@@ -104,7 +104,7 @@ function useHeaderMeta() {
     { test: (p) => p.startsWith("/compras/custos-de-transporte"), label: "Custos de Transporte", Icon: Truck },
     { test: (p) => p.startsWith("/compras/preco-de-produto"), label: "Preço de Produto", Icon: ShoppingCart },
     { test: (p) => p.startsWith("/compras/controle-de-devolucao"), label: "Controle de Devolução", Icon: Files },
-    { test: (p) => p.startsWith("/fiscal/conciliacao-fiscal-triplice"), label: "Conciliação Fiscal Tríplice", Icon: Files },
+    { test: (p) => p.startsWith("/fiscal/conciliacao-fiscal-triplice"), label: "Conciliação Fiscal", Icon: Files },
     { test: (p) => p.startsWith("/compras/portal-de-fornecedores"), label: "Portal de Fornecedores", Icon: ShoppingCart },
     { test: (p) => p.startsWith("/fornecedores/analise"), label: "Análise de fornecedores", Icon: Activity },
   ];

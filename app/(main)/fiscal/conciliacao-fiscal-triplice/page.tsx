@@ -18,14 +18,15 @@ import { Tag } from "@/components/ui/tag";
 import { BigNumberCard } from "@/components/shared/BigNumberCard";
 import { cn } from "@/lib/utils";
 
-type ReconciliationStatus =
-  | "Conciliado"
-  | "Divergência de Valores"
-  | "Não Encontrado na Qive"
-  | "Não Encontrado no ERP"
-  | "Não Encontrado no IBS"
-  | "Não Encontrado no CBS"
-  | "Não Encontrado na Apuração Assistida";
+type ReconciliationStatus = "Conciliado" | "Divergência de Valores" | "Não Encontrado";
+
+type ReconciliationDetail =
+  | "Divergência de Valores ERP e XML"
+  | "Divergência de Valores ERP e Apuração Assistida"
+  | "Divergência de Valores XML e Apuração Assistida"
+  | "Não encontrado no ERP"
+  | "Não encontrado na Qive"
+  | "Não encontrado na Apuração Assistida";
 
 type TaxValues = {
   vIBSUF: number;
@@ -36,13 +37,14 @@ type TaxValues = {
 type ReconciliationRow = {
   chaveAcesso: string;
   status: ReconciliationStatus;
+  detalhamento?: ReconciliationDetail;
   empresa: string;
   filial: string;
   emissao: string;
   tipoDocumento: DocumentType;
+  totalNota: number;
   qive: TaxValues | null;
-  apuracaoIbs: Pick<TaxValues, "vIBSUF" | "vIBSMUN"> | null;
-  apuracaoCbs: Pick<TaxValues, "vCBS"> | null;
+  apuracao: TaxValues | null;
   erp: TaxValues | null;
 };
 
@@ -52,103 +54,131 @@ const STATUS_OPTIONS: Array<ReconciliationStatus | "Todos"> = [
   "Todos",
   "Conciliado",
   "Divergência de Valores",
-  "Não Encontrado na Qive",
-  "Não Encontrado no ERP",
-  "Não Encontrado no IBS",
-  "Não Encontrado no CBS",
-  "Não Encontrado na Apuração Assistida",
+  "Não Encontrado",
+];
+
+const DETAIL_OPTIONS: Array<ReconciliationDetail | "Todos"> = [
+  "Todos",
+  "Divergência de Valores ERP e XML",
+  "Divergência de Valores ERP e Apuração Assistida",
+  "Divergência de Valores XML e Apuração Assistida",
+  "Não encontrado no ERP",
+  "Não encontrado na Qive",
+  "Não encontrado na Apuração Assistida",
 ];
 
 const DOCUMENT_TYPE_OPTIONS: Array<DocumentType | "Todos"> = ["Todos", "NF-e", "CT-e", "NFS-e Nacional"];
 
 const BRANCH_OPTIONS = ["Todas", "Matriz SP", "Filial RJ", "Filial MG"];
 
-const RECONCILIATION_ROWS: ReconciliationRow[] = [
-  {
-    chaveAcesso: "35260601234567000199550010001234891000010018",
-    status: "Conciliado",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Matriz SP",
-    emissao: "04/06/2026",
-    tipoDocumento: "NF-e",
-    qive: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
-    apuracaoIbs: { vIBSUF: 42.18, vIBSMUN: 18.06 },
-    apuracaoCbs: { vCBS: 128.42 },
-    erp: { vIBSUF: 42.18, vIBSMUN: 18.06, vCBS: 128.42 },
-  },
-  {
-    chaveAcesso: "33260608444412000175570010009988771000054821",
-    status: "Divergência de Valores",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Filial RJ",
-    emissao: "05/06/2026",
-    tipoDocumento: "CT-e",
-    qive: { vIBSUF: 88.9, vIBSMUN: 31.1, vCBS: 241.7 },
-    apuracaoIbs: { vIBSUF: 88.9, vIBSMUN: 31.1 },
-    apuracaoCbs: { vCBS: 241.7 },
-    erp: { vIBSUF: 80.9, vIBSMUN: 31.1, vCBS: 219.7 },
-  },
-  {
-    chaveAcesso: "35503081234567800019900000000001234567012345678901",
-    status: "Não Encontrado no ERP",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Filial MG",
-    emissao: "06/06/2026",
-    tipoDocumento: "NFS-e Nacional",
-    qive: { vIBSUF: 16.34, vIBSMUN: 7.88, vCBS: 59.32 },
-    apuracaoIbs: { vIBSUF: 16.34, vIBSMUN: 7.88 },
-    apuracaoCbs: { vCBS: 59.32 },
-    erp: null,
-  },
-  {
-    chaveAcesso: "35260609102030400091550010002200341000037806",
-    status: "Não Encontrado na Apuração Assistida",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Matriz SP",
-    emissao: "07/06/2026",
-    tipoDocumento: "NF-e",
-    qive: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
-    apuracaoIbs: null,
-    apuracaoCbs: null,
-    erp: { vIBSUF: 55.12, vIBSMUN: 14.2, vCBS: 173.87 },
-  },
-  {
-    chaveAcesso: "33260610456789000181570010007766541000123402",
-    status: "Não Encontrado no IBS",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Filial RJ",
-    emissao: "08/06/2026",
-    tipoDocumento: "CT-e",
-    qive: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
-    apuracaoIbs: null,
-    apuracaoCbs: { vCBS: 305.7 },
-    erp: { vIBSUF: 102.44, vIBSMUN: 47.18, vCBS: 305.7 },
-  },
-  {
-    chaveAcesso: "35503081234567800019900000000001234567012345678902",
-    status: "Não Encontrado no CBS",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Filial MG",
-    emissao: "09/06/2026",
-    tipoDocumento: "NFS-e Nacional",
-    qive: { vIBSUF: 24.1, vIBSMUN: 9.4, vCBS: 77.8 },
-    apuracaoIbs: { vIBSUF: 24.1, vIBSMUN: 9.4 },
-    apuracaoCbs: null,
-    erp: { vIBSUF: 24.1, vIBSMUN: 9.4, vCBS: 77.8 },
-  },
-  {
-    chaveAcesso: "35260601987654000123550010000043211000098765",
-    status: "Não Encontrado na Qive",
-    empresa: "Qive Tecnologia Ltda.",
-    filial: "Matriz SP",
-    emissao: "10/06/2026",
-    tipoDocumento: "NF-e",
-    qive: null,
-    apuracaoIbs: { vIBSUF: 61.2, vIBSMUN: 22.4 },
-    apuracaoCbs: { vCBS: 184.55 },
-    erp: { vIBSUF: 61.2, vIBSMUN: 22.4, vCBS: 184.55 },
-  },
+const COMPANIES = [
+  "Qive Tecnologia Ltda.",
+  "Delta Varejo S.A.",
+  "Atlântico Transportes Ltda.",
+  "Norte Serviços Digitais Ltda.",
 ];
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function calculateTaxes(totalNota: number): TaxValues {
+  return {
+    vIBSUF: roundCurrency(totalNota * 0.0005),
+    vIBSMUN: roundCurrency(totalNota * 0.0005),
+    vCBS: roundCurrency(totalNota * 0.085),
+  };
+}
+
+function buildNfeOrCteKey(index: number, tipoDocumento: Extract<DocumentType, "NF-e" | "CT-e">): string {
+  const cUF = index % 3 === 0 ? "35" : index % 3 === 1 ? "33" : "31";
+  const cnpj = String(12345678000190 + index * 137).padStart(14, "0").slice(-14);
+  const model = tipoDocumento === "NF-e" ? "55" : "57";
+  const serie = String((index % 9) + 1).padStart(3, "0");
+  const numero = String(120000 + index * 37).padStart(9, "0");
+  const codigo = String(10000000 + index * 7919).padStart(8, "0").slice(-8);
+  const base = `${cUF}2606${cnpj}${model}${serie}${numero}1${codigo}`;
+  const checkDigit = String([...base].reduce((sum, digit, position) => sum + Number(digit) * ((position % 8) + 2), 0) % 10);
+
+  return `${base}${checkDigit}`;
+}
+
+function buildNfseKey(index: number): string {
+  const municipalityCode = index % 3 === 0 ? "3550308" : index % 3 === 1 ? "3304557" : "3106200";
+  const cnpj = String(22345678000180 + index * 149).padStart(14, "0").slice(-14);
+  const number = String(700000000000000 + index * 97).padStart(15, "0");
+  const verification = String(20260000000000 + index * 413).padStart(14, "0");
+
+  return `${municipalityCode}${cnpj}${number}${verification}`;
+}
+
+function buildDocumentKey(index: number, tipoDocumento: DocumentType): string {
+  if (tipoDocumento === "NFS-e Nacional") return buildNfseKey(index);
+
+  return buildNfeOrCteKey(index, tipoDocumento);
+}
+
+function applyDetailScenario(baseTaxes: TaxValues, detalhamento?: ReconciliationDetail) {
+  const qive = { ...baseTaxes };
+  const apuracao = { ...baseTaxes };
+  const erp = { ...baseTaxes };
+  const mismatchTaxes = {
+    vIBSUF: roundCurrency(baseTaxes.vIBSUF * 1.14 + 0.07),
+    vIBSMUN: roundCurrency(baseTaxes.vIBSMUN * 0.86 + 0.05),
+    vCBS: roundCurrency(baseTaxes.vCBS * 1.08 + 1.37),
+  };
+
+  switch (detalhamento) {
+    case "Divergência de Valores ERP e XML":
+      return { qive, apuracao: { ...mismatchTaxes }, erp: { ...mismatchTaxes } };
+    case "Divergência de Valores ERP e Apuração Assistida":
+      return { qive: { ...qive }, apuracao: { ...apuracao }, erp: { ...mismatchTaxes } };
+    case "Divergência de Valores XML e Apuração Assistida":
+      return { qive, apuracao: { ...mismatchTaxes }, erp: { ...qive } };
+    case "Não encontrado no ERP":
+      return { qive, apuracao, erp: null };
+    case "Não encontrado na Qive":
+      return { qive: null, apuracao, erp };
+    case "Não encontrado na Apuração Assistida":
+      return { qive, apuracao: null, erp };
+    default:
+      return { qive, apuracao, erp };
+  }
+}
+
+const DETAIL_SCENARIOS: ReconciliationDetail[] = [
+  "Divergência de Valores ERP e XML",
+  "Divergência de Valores ERP e Apuração Assistida",
+  "Divergência de Valores XML e Apuração Assistida",
+  "Não encontrado no ERP",
+  "Não encontrado na Qive",
+  "Não encontrado na Apuração Assistida",
+];
+
+const RECONCILIATION_ROWS: ReconciliationRow[] = Array.from({ length: 50 }, (_, index) => {
+  const tipoDocumento = (["NF-e", "CT-e", "NFS-e Nacional"] as DocumentType[])[index % 3];
+  const detalhamento = index >= 35 ? DETAIL_SCENARIOS[(index - 35) % DETAIL_SCENARIOS.length] : undefined;
+  const status: ReconciliationStatus = !detalhamento
+    ? "Conciliado"
+    : detalhamento.startsWith("Divergência")
+      ? "Divergência de Valores"
+      : "Não Encontrado";
+  const totalNota = roundCurrency(450 + ((index * 733) % 28500) + (index % 7) * 84.37);
+  const baseTaxes = calculateTaxes(totalNota);
+  const values = applyDetailScenario(baseTaxes, detalhamento);
+
+  return {
+    chaveAcesso: buildDocumentKey(index + 1, tipoDocumento),
+    status,
+    detalhamento,
+    empresa: COMPANIES[index % COMPANIES.length],
+    filial: BRANCH_OPTIONS[(index % (BRANCH_OPTIONS.length - 1)) + 1],
+    emissao: `${String((index % 15) + 1).padStart(2, "0")}/06/2026`,
+    tipoDocumento,
+    totalNota,
+    ...values,
+  };
+});
 
 const TAX_KEYS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "vCBS"];
 
@@ -171,23 +201,7 @@ function getValuesDelta(a: TaxValues | null, b: TaxValues | null): number {
 }
 
 function getApuracaoValues(row: ReconciliationRow): TaxValues | null {
-  if (!row.apuracaoIbs || !row.apuracaoCbs) return null;
-
-  return {
-    vIBSUF: row.apuracaoIbs.vIBSUF,
-    vIBSMUN: row.apuracaoIbs.vIBSMUN,
-    vCBS: row.apuracaoCbs.vCBS,
-  };
-}
-
-function getApuracaoDisplayValues(row: ReconciliationRow): Partial<Record<keyof TaxValues, number | null>> | null {
-  if (!row.apuracaoIbs && !row.apuracaoCbs) return null;
-
-  return {
-    vIBSUF: row.apuracaoIbs?.vIBSUF ?? null,
-    vIBSMUN: row.apuracaoIbs?.vIBSMUN ?? null,
-    vCBS: row.apuracaoCbs?.vCBS ?? null,
-  };
+  return row.apuracao;
 }
 
 function getMaxDelta(row: ReconciliationRow): number {
@@ -278,6 +292,7 @@ export default function ConciliacaoFiscalTriplicePage() {
   const [statusFilter, setStatusFilter] = React.useState<string>("Todos");
   const [branchFilter, setBranchFilter] = React.useState("Todas");
   const [documentTypeFilter, setDocumentTypeFilter] = React.useState<string>("Todos");
+  const [detailFilter, setDetailFilter] = React.useState<string>("Todos");
   const [search, setSearch] = React.useState("");
   const [selectedRow, setSelectedRow] = React.useState<ReconciliationRow | null>(null);
 
@@ -288,15 +303,16 @@ export default function ConciliacaoFiscalTriplicePage() {
       const matchesStatus = statusFilter === "Todos" || row.status === statusFilter;
       const matchesBranch = branchFilter === "Todas" || row.filial === branchFilter;
       const matchesDocumentType = documentTypeFilter === "Todos" || row.tipoDocumento === documentTypeFilter;
+      const matchesDetail = detailFilter === "Todos" || row.detalhamento === detailFilter;
       const matchesSearch =
         !normalizedSearch ||
         row.chaveAcesso.toLowerCase().includes(normalizedSearch) ||
         row.filial.toLowerCase().includes(normalizedSearch) ||
         row.status.toLowerCase().includes(normalizedSearch);
 
-      return matchesStatus && matchesBranch && matchesDocumentType && matchesSearch;
+      return matchesStatus && matchesBranch && matchesDocumentType && matchesDetail && matchesSearch;
     });
-  }, [branchFilter, documentTypeFilter, search, statusFilter]);
+  }, [branchFilter, detailFilter, documentTypeFilter, search, statusFilter]);
 
   const metrics = React.useMemo(() => {
     const totalOk = RECONCILIATION_ROWS.filter((row) => row.status === "Conciliado").length;
@@ -304,7 +320,7 @@ export default function ConciliacaoFiscalTriplicePage() {
       (row) => row.status === "Divergência de Valores",
     ).length;
     const totalLimbo = RECONCILIATION_ROWS.filter(
-      (row) => row.status.startsWith("Não Encontrado"),
+      (row) => row.status === "Não Encontrado",
     ).length;
 
     return {
@@ -319,7 +335,7 @@ export default function ConciliacaoFiscalTriplicePage() {
     ? TAX_KEYS.flatMap((key) => {
         const xmlValue = selectedRow.qive?.[key] ?? null;
         const erpValue = selectedRow.erp?.[key] ?? null;
-        const apuracaoValue = getApuracaoDisplayValues(selectedRow)?.[key] ?? null;
+        const apuracaoValue = selectedRow.apuracao?.[key] ?? null;
         const erpDelta = xmlValue === null || erpValue === null ? null : xmlValue - erpValue;
         const apuracaoDelta = xmlValue === null || apuracaoValue === null ? null : xmlValue - apuracaoValue;
 
@@ -336,10 +352,10 @@ export default function ConciliacaoFiscalTriplicePage() {
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0C3CF7]">Conciliação fiscal</p>
           <h1 className="text-2xl font-bold tracking-tight text-[#0d0f1c]">
-            Conciliação Fiscal Tríplice (IBS / CBS)
+            Conciliação Fiscal (IBS / CBS)
           </h1>
           <p className="max-w-3xl text-sm text-[#5B616F]">
-            Compare valores capturados pela Qive no XML, escrituração do ERP e dados de apuração assistida para priorizar divergências fiscais.
+            Compare de forma rápida e prática os valores dos XMLs capturados pela Qive, dados da apuração assistida e escrituração do ERP.
           </p>
         </div>
         <Button variant="secondary" className="gap-2">
@@ -349,13 +365,14 @@ export default function ConciliacaoFiscalTriplicePage() {
       </header>
 
       <Card className="rounded-xl border border-[rgba(4,14,35,0.08)] bg-white">
-        <CardContent className="grid gap-4 p-4 md:grid-cols-4">
+        <CardContent className="grid gap-4 p-4 md:grid-cols-5">
           <div className="space-y-2">
             <Label htmlFor="periodo">Período</Label>
             <Input id="periodo" type="text" value="01/06/2026 - 30/06/2026" readOnly />
           </div>
           <SelectField id="filial" label="Filial" value={branchFilter} onChange={setBranchFilter} options={BRANCH_OPTIONS} />
           <SelectField id="status" label="Status do Batimento" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+          <SelectField id="detalhamento" label="Detalhamento" value={detailFilter} onChange={setDetailFilter} options={DETAIL_OPTIONS} />
           <SelectField id="tipo-documento" label="Tipo de documento" value={documentTypeFilter} onChange={setDocumentTypeFilter} options={DOCUMENT_TYPE_OPTIONS} />
         </CardContent>
       </Card>
@@ -371,8 +388,7 @@ export default function ConciliacaoFiscalTriplicePage() {
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(4,14,35,0.08)] p-4">
             <div>
-              <h2 className="text-base font-bold text-[#0d0f1c]">Grid de detalhes da chave</h2>
-              <p className="text-sm text-[#5B616F]">Clique em uma linha com divergência para abrir o De → Para.</p>
+              <h2 className="text-base font-bold text-[#0d0f1c]">Listagem de documentos conciliados</h2>
             </div>
             <div className="relative w-full max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8A90A0]" />
@@ -433,7 +449,7 @@ export default function ConciliacaoFiscalTriplicePage() {
                       </td>
                       <td className="px-3 py-3 align-top"><StatusTag status={row.status} /></td>
                       <TaxValueCells values={row.qive} groupStart />
-                      <TaxValueCells values={getApuracaoDisplayValues(row)} groupStart />
+                      <TaxValueCells values={row.apuracao} groupStart />
                       <TaxValueCells values={row.erp} groupStart />
                       <td className="whitespace-nowrap border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right font-bold text-[#0d0f1c]">
                         {formatCurrency(getMaxDelta(row))}
