@@ -18,7 +18,9 @@ import { Tag } from "@/components/ui/tag";
 import { BigNumberCard } from "@/components/shared/BigNumberCard";
 import { cn } from "@/lib/utils";
 
-type ReconciliationStatus = "Conciliado" | "Divergência de Valores" | "Não Encontrado";
+type ReconciliationStatus = "Conciliado" | "Divergente" | "Pendente" | "Não Encontrado";
+
+type DebitStatus = "E" | "P";
 
 type ReconciliationDetail =
   | "Divergência de Valores ERP e XML"
@@ -32,6 +34,8 @@ type TaxValues = {
   vIBSUF: number;
   vIBSMUN: number;
   vCBS: number;
+  debitoIBSMUN: DebitStatus;
+  debitoCBS: DebitStatus;
 };
 
 type ReconciliationRow = {
@@ -53,7 +57,8 @@ type DocumentType = "CT-e" | "NF-e" | "NFS-e Nacional";
 const STATUS_OPTIONS: Array<ReconciliationStatus | "Todos"> = [
   "Todos",
   "Conciliado",
-  "Divergência de Valores",
+  "Divergente",
+  "Pendente",
   "Não Encontrado",
 ];
 
@@ -87,6 +92,8 @@ function calculateTaxes(totalNota: number): TaxValues {
     vIBSUF: roundCurrency(totalNota * 0.0005),
     vIBSMUN: roundCurrency(totalNota * 0.0005),
     vCBS: roundCurrency(totalNota * 0.085),
+    debitoIBSMUN: "E",
+    debitoCBS: "E",
   };
 }
 
@@ -126,6 +133,8 @@ function applyDetailScenario(baseTaxes: TaxValues, detalhamento?: Reconciliation
     vIBSUF: roundCurrency(baseTaxes.vIBSUF * 1.14 + 0.07),
     vIBSMUN: roundCurrency(baseTaxes.vIBSMUN * 0.86 + 0.05),
     vCBS: roundCurrency(baseTaxes.vCBS * 1.08 + 1.37),
+    debitoIBSMUN: baseTaxes.debitoIBSMUN,
+    debitoCBS: baseTaxes.debitoCBS,
   };
 
   switch (detalhamento) {
@@ -155,17 +164,30 @@ const DETAIL_SCENARIOS: ReconciliationDetail[] = [
   "Não encontrado na Apuração Assistida",
 ];
 
-const RECONCILIATION_ROWS: ReconciliationRow[] = Array.from({ length: 50 }, (_, index) => {
+const PENDING_DEBIT_SCENARIOS: Array<Pick<TaxValues, "debitoIBSMUN" | "debitoCBS">> = [
+  { debitoIBSMUN: "E", debitoCBS: "P" },
+  { debitoIBSMUN: "E", debitoCBS: "P" },
+  { debitoIBSMUN: "P", debitoCBS: "P" },
+  { debitoIBSMUN: "P", debitoCBS: "P" },
+  { debitoIBSMUN: "P", debitoCBS: "E" },
+  { debitoIBSMUN: "P", debitoCBS: "E" },
+];
+
+const RECONCILIATION_ROWS: ReconciliationRow[] = Array.from({ length: 56 }, (_, index) => {
   const tipoDocumento = (["NF-e", "CT-e", "NFS-e Nacional"] as DocumentType[])[index % 3];
-  const detalhamento = index >= 35 ? DETAIL_SCENARIOS[(index - 35) % DETAIL_SCENARIOS.length] : undefined;
-  const status: ReconciliationStatus = !detalhamento
-    ? "Conciliado"
-    : detalhamento.startsWith("Divergência")
-      ? "Divergência de Valores"
-      : "Não Encontrado";
+  const pendingDebitScenario = index >= 50 ? PENDING_DEBIT_SCENARIOS[index - 50] : undefined;
+  const detalhamento = index >= 35 && index < 50 ? DETAIL_SCENARIOS[(index - 35) % DETAIL_SCENARIOS.length] : undefined;
+  const status: ReconciliationStatus = pendingDebitScenario
+    ? "Pendente"
+    : !detalhamento
+      ? "Conciliado"
+      : detalhamento.startsWith("Divergência")
+        ? "Divergente"
+        : "Não Encontrado";
   const totalNota = roundCurrency(450 + ((index * 733) % 28500) + (index % 7) * 84.37);
   const baseTaxes = calculateTaxes(totalNota);
-  const values = applyDetailScenario(baseTaxes, detalhamento);
+  const taxesWithDebit = pendingDebitScenario ? { ...baseTaxes, ...pendingDebitScenario } : baseTaxes;
+  const values = applyDetailScenario(taxesWithDebit, detalhamento);
 
   return {
     chaveAcesso: buildDocumentKey(index + 1, tipoDocumento),
@@ -180,7 +202,8 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = Array.from({ length: 50 }, (_, 
   };
 });
 
-const TAX_KEYS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "vCBS"];
+const TAX_KEYS = ["vIBSUF", "vIBSMUN", "vCBS"] as const;
+const TAX_COLUMNS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "debitoIBSMUN", "vCBS", "debitoCBS"];
 
 function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
@@ -189,6 +212,10 @@ function formatCurrency(value: number | null | undefined): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function isTaxValueKey(key: keyof TaxValues): key is (typeof TAX_KEYS)[number] {
+  return TAX_KEYS.includes(key as (typeof TAX_KEYS)[number]);
 }
 
 function getValuesDelta(a: TaxValues | null, b: TaxValues | null): number {
@@ -210,6 +237,14 @@ function getMaxDelta(row: ReconciliationRow): number {
   return Math.max(getValuesDelta(row.qive, row.erp), getValuesDelta(row.qive, getApuracaoValues(row)));
 }
 
+function formatTaxCellValue(values: Partial<Record<keyof TaxValues, number | DebitStatus | null>> | null, key: keyof TaxValues): string {
+  const value = values?.[key];
+
+  if (isTaxValueKey(key)) return formatCurrency(value as number | null | undefined);
+
+  return value === "E" || value === "P" ? value : "—";
+}
+
 function getStatusTagClasses(status: ReconciliationStatus) {
   if (status === "Conciliado") {
     return {
@@ -219,7 +254,7 @@ function getStatusTagClasses(status: ReconciliationStatus) {
     };
   }
 
-  if (status === "Divergência de Valores") {
+  if (status === "Divergente") {
     return {
       bgColor: "bg-[#FDECEC]",
       textColor: "text-[#B42318]",
@@ -238,10 +273,10 @@ function StatusTag({ status }: { status: ReconciliationStatus }) {
   return <Tag {...getStatusTagClasses(status)}>{status}</Tag>;
 }
 
-function TaxValueCells({ values, groupStart = false }: { values: Partial<Record<keyof TaxValues, number | null>> | null; groupStart?: boolean }) {
+function TaxValueCells({ values, groupStart = false }: { values: Partial<Record<keyof TaxValues, number | DebitStatus | null>> | null; groupStart?: boolean }) {
   return (
     <>
-      {TAX_KEYS.map((key, index) => (
+      {TAX_COLUMNS.map((key, index) => (
         <td
           key={key}
           className={cn(
@@ -249,7 +284,7 @@ function TaxValueCells({ values, groupStart = false }: { values: Partial<Record<
             (groupStart || index === 0) && "border-l border-[rgba(4,14,35,0.08)]",
           )}
         >
-          {formatCurrency(values?.[key])}
+          {formatTaxCellValue(values, key)}
         </td>
       ))}
     </>
@@ -317,7 +352,10 @@ export default function ConciliacaoFiscalTriplicePage() {
   const metrics = React.useMemo(() => {
     const totalOk = RECONCILIATION_ROWS.filter((row) => row.status === "Conciliado").length;
     const totalDivergencias = RECONCILIATION_ROWS.filter(
-      (row) => row.status === "Divergência de Valores",
+      (row) => row.status === "Divergente",
+    ).length;
+    const totalPendentes = RECONCILIATION_ROWS.filter(
+      (row) => row.status === "Pendente",
     ).length;
     const totalLimbo = RECONCILIATION_ROWS.filter(
       (row) => row.status === "Não Encontrado",
@@ -327,6 +365,7 @@ export default function ConciliacaoFiscalTriplicePage() {
       totalChaves: RECONCILIATION_ROWS.length,
       totalOk,
       totalDivergencias,
+      totalPendentes,
       totalLimbo,
     };
   }, []);
@@ -377,10 +416,11 @@ export default function ConciliacaoFiscalTriplicePage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <BigNumberCard value={metrics.totalChaves} label="Documentos Processados" disableWhenZero={false} />
         <BigNumberCard value={metrics.totalOk} label="Documentos Conciliados" disableWhenZero={false} className="bg-[#F7FCF9]" />
-        <BigNumberCard value={metrics.totalDivergencias} label="Divergência de Valores" disableWhenZero={false} className="bg-[#FFF8F8]" />
+        <BigNumberCard value={metrics.totalDivergencias} label="Divergente" disableWhenZero={false} className="bg-[#FFF8F8]" />
+        <BigNumberCard value={metrics.totalPendentes} label="Documentos Pendentes" disableWhenZero={false} className="bg-[#FFFBF0]" />
         <BigNumberCard value={metrics.totalLimbo} label="Documentos Não Encontrados" disableWhenZero={false} className="bg-[#FFFBF0]" />
       </div>
 
@@ -403,19 +443,19 @@ export default function ConciliacaoFiscalTriplicePage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] border-collapse text-sm">
+            <table className="w-full min-w-[1680px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-[rgba(4,14,35,0.08)] bg-[#F8F9FB] text-left text-xs font-bold uppercase tracking-wide text-[#5B616F]">
                   <th rowSpan={2} className="w-[280px] px-3 py-3">Chave de Acesso</th>
                   <th rowSpan={2} className="w-[180px] px-3 py-3">Status</th>
-                  <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Qive (XML)</th>
-                  <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Apuração Assistida</th>
-                  <th colSpan={3} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
+                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Qive (XML)</th>
+                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Apuração Assistida</th>
+                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
                   <th rowSpan={2} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right">Divergência</th>
                 </tr>
                 <tr className="border-b border-[rgba(4,14,35,0.08)] bg-[#F8F9FB] text-xs font-bold text-[#5B616F]">
                   {Array.from({ length: 3 }).map((_, groupIndex) =>
-                    TAX_KEYS.map((key, index) => (
+                    TAX_COLUMNS.map((key, index) => (
                       <th
                         key={`${groupIndex}-${key}`}
                         className={cn(
@@ -423,7 +463,7 @@ export default function ConciliacaoFiscalTriplicePage() {
                           index === 0 && "border-l border-[rgba(4,14,35,0.08)]",
                         )}
                       >
-                        {key}
+                        {key === "debitoIBSMUN" || key === "debitoCBS" ? "Débito" : key}
                       </th>
                     )),
                   )}
@@ -484,7 +524,7 @@ export default function ConciliacaoFiscalTriplicePage() {
             <div className="space-y-4 p-4">
               <div className="rounded-lg border border-[rgba(4,14,35,0.08)] bg-[#FAFBFC] p-3">
                 <div className="mb-2 flex items-center gap-2">
-                  {selectedRow.status === "Divergência de Valores" ? (
+                  {selectedRow.status === "Divergente" ? (
                     <AlertTriangle className="h-4 w-4 text-[#B42318]" />
                   ) : (
                     <FileSearch className="h-4 w-4 text-[#946200]" />
