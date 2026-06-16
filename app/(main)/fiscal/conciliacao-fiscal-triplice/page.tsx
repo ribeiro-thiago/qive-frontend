@@ -203,7 +203,8 @@ const RECONCILIATION_ROWS: ReconciliationRow[] = Array.from({ length: 56 }, (_, 
 });
 
 const TAX_KEYS = ["vIBSUF", "vIBSMUN", "vCBS"] as const;
-const TAX_COLUMNS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "debitoIBSMUN", "vCBS", "debitoCBS"];
+const TAX_VALUE_COLUMNS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "vCBS"];
+const ASSISTED_ASSESSMENT_COLUMNS: Array<keyof TaxValues> = ["vIBSUF", "vIBSMUN", "debitoIBSMUN", "vCBS", "debitoCBS"];
 
 function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
@@ -273,10 +274,18 @@ function StatusTag({ status }: { status: ReconciliationStatus }) {
   return <Tag {...getStatusTagClasses(status)}>{status}</Tag>;
 }
 
-function TaxValueCells({ values, groupStart = false }: { values: Partial<Record<keyof TaxValues, number | DebitStatus | null>> | null; groupStart?: boolean }) {
+function TaxValueCells({
+  values,
+  columns,
+  groupStart = false,
+}: {
+  values: Partial<Record<keyof TaxValues, number | DebitStatus | null>> | null;
+  columns: Array<keyof TaxValues>;
+  groupStart?: boolean;
+}) {
   return (
     <>
-      {TAX_COLUMNS.map((key, index) => (
+      {columns.map((key, index) => (
         <td
           key={key}
           className={cn(
@@ -419,7 +428,7 @@ export default function ConciliacaoFiscalTriplicePage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <BigNumberCard value={metrics.totalChaves} label="Documentos Processados" disableWhenZero={false} />
         <BigNumberCard value={metrics.totalOk} label="Documentos Conciliados" disableWhenZero={false} className="bg-[#F7FCF9]" />
-        <BigNumberCard value={metrics.totalDivergencias} label="Divergente" disableWhenZero={false} className="bg-[#FFF8F8]" />
+        <BigNumberCard value={metrics.totalDivergencias} label="Documentos Divergentes" disableWhenZero={false} className="bg-[#FFF8F8]" />
         <BigNumberCard value={metrics.totalPendentes} label="Documentos Pendentes" disableWhenZero={false} className="bg-[#FFFBF0]" />
         <BigNumberCard value={metrics.totalLimbo} label="Documentos Não Encontrados" disableWhenZero={false} className="bg-[#FFFBF0]" />
       </div>
@@ -443,19 +452,19 @@ export default function ConciliacaoFiscalTriplicePage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1680px] border-collapse text-sm">
+            <table className="w-full min-w-[1320px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-[rgba(4,14,35,0.08)] bg-[#F8F9FB] text-left text-xs font-bold uppercase tracking-wide text-[#5B616F]">
                   <th rowSpan={2} className="w-[280px] px-3 py-3">Chave de Acesso</th>
                   <th rowSpan={2} className="w-[180px] px-3 py-3">Status</th>
-                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Qive (XML)</th>
-                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Apuração Assistida</th>
-                  <th colSpan={5} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
+                  <th colSpan={TAX_VALUE_COLUMNS.length} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Qive (XML)</th>
+                  <th colSpan={ASSISTED_ASSESSMENT_COLUMNS.length} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">Apuração Assistida</th>
+                  <th colSpan={TAX_VALUE_COLUMNS.length} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-center">ERP (Escrituração)</th>
                   <th rowSpan={2} className="border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right">Divergência</th>
                 </tr>
                 <tr className="border-b border-[rgba(4,14,35,0.08)] bg-[#F8F9FB] text-xs font-bold text-[#5B616F]">
-                  {Array.from({ length: 3 }).map((_, groupIndex) =>
-                    TAX_COLUMNS.map((key, index) => (
+                  {[TAX_VALUE_COLUMNS, ASSISTED_ASSESSMENT_COLUMNS, TAX_VALUE_COLUMNS].map((columns, groupIndex) =>
+                    columns.map((key, index) => (
                       <th
                         key={`${groupIndex}-${key}`}
                         className={cn(
@@ -488,9 +497,9 @@ export default function ConciliacaoFiscalTriplicePage() {
                         <div className="mt-1 text-xs text-[#5B616F]">emissão {row.emissao} · {row.tipoDocumento}</div>
                       </td>
                       <td className="px-3 py-3 align-top"><StatusTag status={row.status} /></td>
-                      <TaxValueCells values={row.qive} groupStart />
-                      <TaxValueCells values={row.apuracao} groupStart />
-                      <TaxValueCells values={row.erp} groupStart />
+                      <TaxValueCells values={row.qive} columns={TAX_VALUE_COLUMNS} groupStart />
+                      <TaxValueCells values={row.apuracao} columns={ASSISTED_ASSESSMENT_COLUMNS} groupStart />
+                      <TaxValueCells values={row.erp} columns={TAX_VALUE_COLUMNS} groupStart />
                       <td className="whitespace-nowrap border-l border-[rgba(4,14,35,0.08)] px-3 py-3 text-right font-bold text-[#0d0f1c]">
                         {formatCurrency(getMaxDelta(row))}
                       </td>
